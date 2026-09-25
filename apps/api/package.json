@@ -1,0 +1,21 @@
+{
+  "name": "@caramelo/api",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node ../../scripts/build-node.mjs --watch",
+    "build": "node ../../scripts/build-node.mjs",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@caramelo/contracts": "*",
+    "@caramelo/database": "*",
+    "fastify": "^5.12.5",
+    "@fastify/cookie": "^11.0.0",
+    "@fastify/helmet": "^13.0.0",
+    "@fastify/rate-limit": "^10.3.0",
+    "dotenv": "^17.2.0"
+  },
+  "devDependencies": {}
+}

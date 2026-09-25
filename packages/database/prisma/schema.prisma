@@ -1,0 +1,389 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated"
+}
+datasource db {
+  provider = "postgresql"
+}
+
+model Company {
+  id String @id @default(uuid()) @db.Uuid
+  slug String @unique
+  name String
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  branches Branch[]
+  memberships Membership[]
+  roles Role[]
+  customers Customer[]
+  suppliers Supplier[]
+  categories Category[]
+  products Product[]
+  warehouses Warehouse[]
+  sales Sale[]
+  financialEntries FinancialEntry[]
+  bankAccounts BankAccount[]
+  cashRegisters CashRegister[]
+  fiscalDocuments FiscalDocument[]
+  auditLogs AuditLog[]
+}
+model Branch {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  name String
+  company Company @relation(fields:[companyId], references:[id])
+  memberships Membership[]
+  warehouses Warehouse[]
+  sales Sale[]
+  @@unique([companyId,id])
+}
+model User {
+  id String @id @default(uuid()) @db.Uuid
+  email String @unique
+  name String
+  passwordHash String
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  memberships Membership[]
+}
+model Permission {
+  code String @id
+  description String
+  roles RolePermission[]
+}
+model Role {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  name String
+  company Company @relation(fields:[companyId],references:[id])
+  permissions RolePermission[]
+  memberships Membership[]
+  @@unique([companyId,id])
+  @@unique([companyId,name])
+}
+model RolePermission {
+  roleId String @db.Uuid
+  permissionCode String
+  role Role @relation(fields:[roleId],references:[id],onDelete:Cascade)
+  permission Permission @relation(fields:[permissionCode],references:[code])
+  @@id([roleId,permissionCode])
+}
+model Membership {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  userId String @db.Uuid
+  roleId String @db.Uuid
+  branchId String? @db.Uuid
+  active Boolean @default(true)
+  company Company @relation(fields:[companyId],references:[id])
+  user User @relation(fields:[userId],references:[id])
+  role Role @relation(fields:[companyId,roleId],references:[companyId,id])
+  branch Branch? @relation(fields:[companyId,branchId],references:[companyId,id])
+  sessions Session[]
+  sales Sale[]
+  stockMovements StockMovement[]
+  auditLogs AuditLog[]
+  @@unique([companyId,id])
+  @@unique([companyId,userId])
+  @@index([userId])
+}
+model Session {
+  id String @id @default(uuid()) @db.Uuid
+  tokenHash String @unique
+  membershipId String @db.Uuid
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  membership Membership @relation(fields:[membershipId],references:[id],onDelete:Cascade)
+  @@index([expiresAt])
+  @@index([membershipId])
+}
+model Customer {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  name String
+  document String?
+  registration String?
+  phone String?
+  whatsapp String?
+  email String?
+  postalCode String?
+  street String?
+  number String?
+  complement String?
+  district String?
+  city String?
+  state String?
+  notes String?
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company Company @relation(fields:[companyId],references:[id])
+  sales Sale[]
+  financialEntries FinancialEntry[]
+  @@unique([companyId,id])
+  @@unique([companyId,document])
+  @@index([companyId,name])
+  @@index([companyId,createdAt])
+}
+model Supplier {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  name String
+  document String?
+  registration String?
+  phone String?
+  whatsapp String?
+  email String?
+  postalCode String?
+  street String?
+  number String?
+  complement String?
+  district String?
+  city String?
+  state String?
+  notes String?
+  active Boolean @default(true)
+  company Company @relation(fields:[companyId],references:[id])
+  products Product[]
+  financialEntries FinancialEntry[]
+  @@unique([companyId,id])
+  @@unique([companyId,document])
+}
+model Category {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  name String
+  company Company @relation(fields:[companyId],references:[id])
+  products Product[]
+  @@unique([companyId,id])
+  @@unique([companyId,name])
+}
+model Product {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  code String
+  barcode String?
+  description String
+  categoryId String? @db.Uuid
+  supplierId String? @db.Uuid
+  brand String?
+  unit String @default("UN")
+  cost Decimal @default(0) @db.Decimal(14,2)
+  price Decimal @db.Decimal(14,2)
+  minStock Decimal @default(0) @db.Decimal(14,3)
+  location String?
+  ncm String?
+  cest String?
+  cfop String?
+  origin String?
+  cst String?
+  csosn String?
+  taxProfile Json?
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company Company @relation(fields:[companyId],references:[id])
+  category Category? @relation(fields:[companyId,categoryId],references:[companyId,id])
+  supplier Supplier? @relation(fields:[companyId,supplierId],references:[companyId,id])
+  balances StockBalance[]
+  movements StockMovement[]
+  saleItems SaleItem[]
+  @@unique([companyId,id])
+  @@unique([companyId,code])
+  @@unique([companyId,barcode])
+  @@index([companyId,description])
+}
+model Warehouse {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  branchId String @db.Uuid
+  name String
+  company Company @relation(fields:[companyId],references:[id])
+  branch Branch @relation(fields:[companyId,branchId],references:[companyId,id])
+  balances StockBalance[]
+  movements StockMovement[]
+  @@unique([companyId,id])
+}
+model StockBalance {
+  companyId String @db.Uuid
+  warehouseId String @db.Uuid
+  productId String @db.Uuid
+  quantity Decimal @default(0) @db.Decimal(14,3)
+  warehouse Warehouse @relation(fields:[companyId,warehouseId],references:[companyId,id])
+  product Product @relation(fields:[companyId,productId],references:[companyId,id])
+  @@id([companyId,warehouseId,productId])
+  @@index([companyId,productId])
+}
+enum StockMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+  TRANSFER
+}
+model StockMovement {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  warehouseId String @db.Uuid
+  productId String @db.Uuid
+  actorId String @db.Uuid
+  type StockMovementType
+  quantity Decimal @db.Decimal(14,3)
+  reason String
+  transferGroup String? @db.Uuid
+  createdAt DateTime @default(now())
+  warehouse Warehouse @relation(fields:[companyId,warehouseId],references:[companyId,id])
+  product Product @relation(fields:[companyId,productId],references:[companyId,id])
+  actor Membership @relation(fields:[companyId,actorId],references:[companyId,id])
+  @@index([companyId,createdAt])
+  @@index([companyId,productId])
+}
+enum SaleStatus {
+  QUOTE
+  ORDER
+  COMPLETED
+  CANCELLED
+  RETURNED
+}
+model Sale {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  branchId String @db.Uuid
+  customerId String? @db.Uuid
+  sellerId String @db.Uuid
+  number Int
+  status SaleStatus @default(QUOTE)
+  total Decimal @db.Decimal(14,2)
+  discount Decimal @default(0) @db.Decimal(14,2)
+  createdAt DateTime @default(now())
+  company Company @relation(fields:[companyId],references:[id])
+  branch Branch @relation(fields:[companyId,branchId],references:[companyId,id])
+  customer Customer? @relation(fields:[companyId,customerId],references:[companyId,id])
+  seller Membership @relation(fields:[companyId,sellerId],references:[companyId,id])
+  items SaleItem[]
+  payments Payment[]
+  financialEntries FinancialEntry[]
+  fiscalDocuments FiscalDocument[]
+  @@unique([companyId,id])
+  @@unique([companyId,number])
+  @@index([companyId,status,createdAt])
+}
+model SaleItem {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  saleId String @db.Uuid
+  productId String @db.Uuid
+  description String
+  quantity Decimal @db.Decimal(14,3)
+  unitPrice Decimal @db.Decimal(14,2)
+  unitCost Decimal @db.Decimal(14,2)
+  discount Decimal @default(0) @db.Decimal(14,2)
+  sale Sale @relation(fields:[companyId,saleId],references:[companyId,id])
+  product Product @relation(fields:[companyId,productId],references:[companyId,id])
+  @@index([companyId,saleId])
+}
+enum PaymentMethod {
+  CASH
+  PIX
+  DEBIT_CARD
+  CREDIT_CARD
+  BANK_SLIP
+  STORE_CREDIT
+  OTHER
+}
+model Payment {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  saleId String @db.Uuid
+  method PaymentMethod
+  amount Decimal @db.Decimal(14,2)
+  paidAt DateTime?
+  sale Sale @relation(fields:[companyId,saleId],references:[companyId,id])
+  @@index([companyId,saleId])
+}
+enum EntryType {
+  RECEIVABLE
+  PAYABLE
+}
+enum EntryStatus {
+  OPEN
+  SETTLED
+  CANCELLED
+}
+model FinancialEntry {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  saleId String? @db.Uuid
+  customerId String? @db.Uuid
+  supplierId String? @db.Uuid
+  type EntryType
+  status EntryStatus @default(OPEN)
+  description String
+  amount Decimal @db.Decimal(14,2)
+  dueDate DateTime @db.Date
+  settledAt DateTime?
+  company Company @relation(fields:[companyId],references:[id])
+  sale Sale? @relation(fields:[companyId,saleId],references:[companyId,id])
+  customer Customer? @relation(fields:[companyId,customerId],references:[companyId,id])
+  supplier Supplier? @relation(fields:[companyId,supplierId],references:[companyId,id])
+  @@unique([companyId,id])
+  @@index([companyId,type,status,dueDate])
+}
+model BankAccount {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  name String
+  company Company @relation(fields:[companyId],references:[id])
+  @@unique([companyId,id])
+}
+model CashRegister {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  name String
+  company Company @relation(fields:[companyId],references:[id])
+  movements CashMovement[]
+  @@unique([companyId,id])
+}
+model CashMovement {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  cashRegisterId String @db.Uuid
+  amount Decimal @db.Decimal(14,2)
+  description String
+  createdAt DateTime @default(now())
+  cashRegister CashRegister @relation(fields:[companyId,cashRegisterId],references:[companyId,id])
+  @@index([companyId,createdAt])
+}
+enum FiscalDocumentType {
+  NFE
+  NFCE
+  NFSE
+  CTE
+  MDFE
+}
+model FiscalDocument {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  saleId String? @db.Uuid
+  type FiscalDocumentType
+  providerReference String?
+  status String @default("DRAFT")
+  createdAt DateTime @default(now())
+  company Company @relation(fields:[companyId],references:[id])
+  sale Sale? @relation(fields:[companyId,saleId],references:[companyId,id])
+  @@unique([companyId,id])
+  @@index([companyId,createdAt])
+}
+model AuditLog {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  actorId String? @db.Uuid
+  action String
+  module String
+  recordId String
+  metadata Json?
+  createdAt DateTime @default(now())
+  company Company @relation(fields:[companyId],references:[id])
+  actor Membership? @relation(fields:[companyId,actorId],references:[companyId,id])
+  @@index([companyId,createdAt])
+  @@index([companyId,module,recordId])
+}

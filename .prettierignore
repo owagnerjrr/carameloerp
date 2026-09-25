@@ -1,0 +1,9 @@
+node_modules
+dist
+packages/database/src/generated
+.local
+package-lock.json
+coverage
+test-results
+playwright-report
+work

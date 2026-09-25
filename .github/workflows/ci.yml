@@ -1,0 +1,41 @@
+name: Qualidade Caramelo ERP
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run setup:env
+      - run: docker compose up -d --wait postgres
+      - name: Criar banco exclusivo de testes
+        run: docker compose exec -T postgres sh -c 'createdb -U "$POSTGRES_USER" caramelo_test'
+      - run: npm run db:generate
+      - run: npm run db:migrate
+      - run: npm run db:seed
+      - run: npm run test:db
+      - run: npm run check
+      - run: npm run format:check
+      - run: npm audit --audit-level=moderate
+      - run: npx playwright install --with-deps chromium
+      - name: Verificar interface desktop e celular
+        run: |
+          npm run dev > /tmp/caramelo-dev.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail http://localhost:5173/ > /dev/null && curl --silent --fail http://127.0.0.1:3333/api/health > /dev/null; then break; fi
+            sleep 1
+          done
+          npm run test:e2e
+      - name: Encerrar PostgreSQL
+        if: always()
+        run: docker compose down
