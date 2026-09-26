@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { api, type Auth } from "./api";
 import { Loading, ErrorMessage } from "./components";
+import carameloLogo from "./assets/caramelo-livraria.jpeg";
 const Dashboard = lazy(() =>
   import("./pages/Dashboard").then((m) => ({ default: m.Dashboard })),
 );
@@ -67,13 +68,14 @@ const pages = [
 ];
 export function Brand() {
   return (
-    <div className="brand">
-      <span className="brand-symbol">
-        c<span>•</span>
-      </span>
-      <div>
-        caramelo<span>ERP</span>
-      </div>
+    <div className="brand" title="Caramelo Livraria">
+      <img
+        className="brand-logo"
+        src={carameloLogo}
+        alt="Caramelo Livraria"
+        width={320}
+        height={320}
+      />
     </div>
   );
 }

@@ -87,50 +87,20 @@ strong {
   overflow-y: auto;
 }
 .brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 12px;
-  color: #5b3928;
-  white-space: nowrap;
+  display: block;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #f68c08;
+  width: 100%;
 }
-.brand > div {
-  font-size: 27px;
-  font-weight: 720;
-  letter-spacing: -1.2px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.brand > div > span {
-  font-size: 9px;
-  letter-spacing: 1px;
-  color: #9e795e;
-  background: #f5ece1;
-  border-radius: 4px;
-  padding: 3px 4px;
-  margin-top: 6px;
-}
-.brand-symbol {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #ba7045;
-  color: #fff3de;
-  border-radius: 12px;
-  font-size: 38px;
-  width: 39px;
-  height: 40px;
-  line-height: 1;
-  font-weight: 700;
-  position: relative;
-  padding-bottom: 8px;
-}
-.brand-symbol > span {
-  position: absolute;
-  font-size: 21px;
-  right: 5px;
-  top: 0;
+.brand-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2.6;
+  object-fit: cover;
+  object-position: center 55%;
 }
 .workspace {
   display: flex;
@@ -1084,6 +1054,7 @@ textarea {
 }
 .login-story > .brand {
   padding: 0;
+  max-width: 260px;
 }
 .login-story h1 {
   font-size: clamp(36px, 4.3vw, 65px);
@@ -1560,5 +1531,30 @@ textarea {
   * {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+@media (min-width: 851px) {
+  .collapsed .brand {
+    position: relative;
+    width: 40px;
+    height: 54px;
+    padding: 0;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .collapsed .brand-logo {
+    position: absolute;
+    width: 200px;
+    max-width: none;
+    height: 200px;
+    left: -14px;
+    top: -82px;
+    object-fit: contain;
+  }
+}
+@media (max-width: 850px) {
+  .collapsed .brand {
+    padding: 0;
   }
 }
