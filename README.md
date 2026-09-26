@@ -1,6 +1,6 @@
 # Caramelo ERP
 
-ERP web para pequenas e médias empresas brasileiras. Identidade visual própria, interface em português e base modular preparada para evoluir para SaaS. **Versão 0.1: primeira entrega funcional; não é um ERP completo nem um serviço pronto para comercialização.**
+ERP web para uma **rede de livrarias brasileiras**. Interface em português e base modular preparada para evoluir para SaaS. Esta etapa entrega livros, entrada e estoque por filial; não é um ERP completo nem um serviço pronto para comercialização.
 
 ## O que já funciona
 
@@ -14,7 +14,50 @@ ERP web para pequenas e médias empresas brasileiras. Identidade visual própria
 - Auditoria de login, cadastros e mudanças de acesso, sem segredos ou conteúdo integral dos registros.
 - Migrations, seed fictício, testes de API com PostgreSQL real, testes de navegador, lint, build e CI.
 
-Os modelos de estoque, vendas, financeiro e fiscal existem para sustentar a evolução e os indicadores de demonstração. Não há endpoints para concluir vendas, movimentar estoque, baixar pagamentos ou emitir documentos. Menus dessas fases estão identificados como “Em breve”.
+Entradas e ajustes de estoque são operacionais e persistem no PostgreSQL. Vendas, pagamentos e fiscal continuam sem operações: seus modelos e dados de seed não significam PDV, integração financeira ou emissão real. Esses menus permanecem “Em breve”.
+
+## Livros, leitura e entrada de mercadoria
+
+Em **Livros**, cadastre título (campo comercial `description` preservado), subtítulo, ISBN-10/13, EAN/barcode, SKU, autor/coautores, editora/selo, edição/ano, idioma, categoria/gênero, páginas, formato/capa, peso/dimensões, URL HTTPS da imagem, sinopse, custo/preço, mínimo/estante, NCM e status. Não há upload nem consulta bibliográfica externa. O cadastro antigo permanece válido, sem conversão destrutiva.
+
+ISBN valida dígitos verificadores e remove hífens/espaços. ISBN-10 é resolvido como seu equivalente ISBN-13; ambos devem identificar a mesma edição quando informados juntos. `ProductIdentifier` impede duplicar identificador normalizado dentro da empresa, inclusive colisão com SKU. Códigos `DEMO-*` são códigos internos de demonstração, não ISBN real. Busca manual aceita título, autor, ISBN e SKU; leitura usa resolução exata, não busca ambígua por trecho.
+
+1. Abra **Estoque → Entrada de Livros** e escolha filial/depósito e fornecedor cadastrado.
+2. Informe opcionalmente documento, nota, observações e a data de recebimento.
+3. Coloque o leitor em modo teclado USB com sufixo Enter. A tela captura o código, limpa o campo e mantém o foco. Não há driver proprietário exigido pelo aplicativo.
+4. Cada leitura acrescenta um exemplar; ler o mesmo código três vezes resulta em quantidade 3. Quantidade e custo podem ser editados na tabela. **Adicionar manualmente** pesquisa e seleciona livros.
+5. Código desconhecido oferece **Cadastrar livro** para quem tem permissão: o modal preserva a entrada e adiciona o novo cadastro ao retornar.
+6. **Confirmar entrada** apresenta resumo de unidade, fornecedor, títulos, exemplares e valor. **Confirmar** grava documento, itens, movimentos, saldos e auditoria em uma transação.
+
+O rascunho fica em memória enquanto a tela está montada, inclusive ao cadastrar livro e alternar as abas internas. Recarregar a página ou sair do módulo descarta a entrada ainda não confirmada. A confirmação usa chave idempotente: repetir a mesma requisição não soma novamente; reutilizar a chave com outros valores é rejeitado. O custo da entrada é histórico; não altera automaticamente o custo comercial do catálogo.
+
+## Estoque por filial, histórico e ajuste
+
+`Company → Branch → Warehouse → StockBalance`, chave `(empresa, depósito, livro)`. A consulta inclui livros sem linha de saldo como zero e filtra filial, título/ISBN/autor, editora, categoria e NORMAL/ESTOQUE BAIXO/SEM ESTOQUE. O mínimo/localização cadastral é utilizado quando não há valor específico no saldo. Não há edição direta de quantidade no livro.
+
+**Rede e histórico** soma depósitos por filial e mostra o total autorizado, usuário, data/hora, tipo, origem, quantidade, saldo anterior/posterior e motivo. Movimentos antigos sem esses detalhes aparecem como legado, sem fabricar valores retroativos.
+
+**Ajustar** exige contagem física e motivo de pelo menos 8 caracteres. Por exemplo, saldo 10 e contagem 8 geram movimento −2. Saldo esperado é validado no servidor: se mudou desde a consulta, atualize a tela e confira novamente. Sem alteração, o ajuste é recusado. Lock transacional por depósito evita perda de atualizações simultâneas; erro em qualquer item reverte tudo.
+
+Perfis Administrador, Gerente e Estoque recebem `stock:read`, `stock:receive`, `stock:adjust`. Na administração de usuários, associe uma filial ou todas. Administrador sempre acessa a empresa inteira. Outros perfis associados a uma filial não podem consultar/alterar estoque de outra; o dashboard financeiro consolidado e a administração global ficam indisponíveis nesses vínculos restritos. Clientes/catálogo continuam compartilhados dentro da empresa. Gestão completa de cadastro de filiais/fornecedores permanece no roadmap; a entrada utiliza os registros existentes.
+
+## Migration desta etapa e testes de estoque
+
+`202609260001_books_stock` é aditiva: novos campos opcionais, `ProductIdentifier`, `StockDocument`, `StockDocumentItem`, relações e constraints. Preserva dados existentes, indexa os identificadores legados e acrescenta permissões aos perfis padrão. Colisão legada interrompe a migration transacional para revisão; não remove nenhum produto para resolver duplicidade.
+
+```powershell
+npm run db:generate
+npm run db:migrate
+npm run test:db
+npm test
+npm run lint
+npm run build
+npm run test:e2e
+```
+
+Configure `TEST_DATABASE_URL` separado terminado em `_test`. Testes de estoque exigem banco local e são proibidos em produção. `tests/stock.test.ts` verifica 0→10→15, A15/B5/total20, rollback após alteração intermediária, idempotência simultânea, ajustes e restrições por filial. `tests/stock.browser.spec.ts` inicia API/Vite isolados nas portas 3335/5174 sobre o banco de testes, usa o cadastro real, simula código+Enter três vezes, confirma entradas e confere o banco diretamente, testa seleção manual e cadastro desconhecido preservando a operação. Fecha processos e remove somente suas fixtures ao terminar. A suíte antiga requer os servidores de desenvolvimento na 3333/5173. Não execute simultaneamente a suíte de API que limpa fixtures e a suíte de navegador de estoque.
+
+O teste antigo de dashboard aceita R$ 0,00: um dia sem vendas é legítimo. Detalhes de transação/escopo estão em `docs/ESTOQUE-ARQUITETURA.md`. Leitor físico não foi necessário aos testes; compatibilidade do aparelho/configuração deve ser conferida em modo teclado com Enter.
 
 ## Arquitetura e tecnologias
 

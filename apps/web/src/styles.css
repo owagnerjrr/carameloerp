@@ -1558,3 +1558,117 @@ textarea {
     padding: 0;
   }
 }
+/* Operational inventory: readable forms and tables on every screen size. */
+.stock-tabs,
+.stock-summary,
+.scan-bar,
+.stock-network {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+.stock-entry {
+  padding: 24px;
+}
+.stock-entry h2 {
+  margin-top: 0;
+}
+.stock-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.stock-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  padding: 20px;
+  margin: 18px 0;
+}
+.stock-filters label,
+.stock-entry label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.stock-filters input,
+.stock-filters select,
+.stock-entry input,
+.stock-entry select,
+.stock-entry textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd5cb;
+  border-radius: 8px;
+  background: white;
+  color: #29241e;
+  min-width: 0;
+}
+.scan-bar label {
+  flex: 1;
+  min-width: 190px;
+}
+.scan-bar {
+  align-items: flex-end;
+}
+.scan-bar input {
+  font-size: 18px;
+}
+.stock-entry td input {
+  min-width: 90px;
+  max-width: 120px;
+}
+.stock-summary {
+  justify-content: flex-end;
+}
+.stock-summary strong {
+  font-size: 24px;
+}
+.stock-success {
+  padding: 14px;
+  background: #edf8ef;
+  color: #1d6033;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+.stock-warning {
+  padding: 12px;
+  background: #fff3df;
+  border-radius: 8px;
+}
+.stock-network > .panel {
+  padding: 15px;
+  min-width: 140px;
+}
+.stock-network strong {
+  display: block;
+  font-size: 24px;
+}
+.manual-book {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 8px 0;
+}
+@media (max-width: 700px) {
+  .stock-filters {
+    grid-template-columns: 1fr;
+  }
+  .stock-entry {
+    padding: 14px;
+  }
+  .stock-summary {
+    justify-content: space-between;
+  }
+  .scan-bar button {
+    flex: 1;
+  }
+  .stock-tabs button {
+    flex: 1;
+  }
+}

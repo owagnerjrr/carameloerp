@@ -10,6 +10,7 @@ import { authRoutes } from "./modules/auth.js";
 import { catalogRoutes } from "./modules/catalog.js";
 import { userRoutes } from "./modules/users.js";
 import { dashboardRoutes } from "./modules/dashboard.js";
+import { stockRoutes } from "./modules/stock.js";
 export interface AppOptions {
   db: Database;
   origin: string;
@@ -66,6 +67,7 @@ export async function buildApp(options: AppOptions) {
     const m = session.membership;
     if (!m.active || !m.user.active || !m.company.active) return;
     request.auth = {
+      branchId: m.role.name === "Administrador" ? null : m.branchId,
       companyId: m.companyId,
       membershipId: m.id,
       userId: m.userId,
@@ -73,7 +75,14 @@ export async function buildApp(options: AppOptions) {
       email: m.user.email,
       companyName: m.company.name,
       role: m.role.name,
-      permissions: m.role.permissions.map((p) => p.permissionCode),
+      permissions: m.role.permissions
+        .map((p) => p.permissionCode)
+        .filter(
+          (p) =>
+            m.role.name === "Administrador" ||
+            !m.branchId ||
+            !["dashboard:read", "users:manage"].includes(p),
+        ),
     };
   });
   app.setErrorHandler((error, request, reply) => {
@@ -123,5 +132,6 @@ export async function buildApp(options: AppOptions) {
   await catalogRoutes(app, options.db);
   await userRoutes(app, options.db);
   await dashboardRoutes(app, options.db);
+  await stockRoutes(app, options.db);
   return app;
 }

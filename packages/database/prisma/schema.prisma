@@ -69,6 +69,7 @@ model RolePermission {
   @@id([roleId,permissionCode])
 }
 model Membership {
+  stockDocuments StockDocument[]
   id String @id @default(uuid()) @db.Uuid
   companyId String @db.Uuid
   userId String @db.Uuid
@@ -126,6 +127,7 @@ model Customer {
   @@index([companyId,createdAt])
 }
 model Supplier {
+  stockDocuments StockDocument[]
   id String @id @default(uuid()) @db.Uuid
   companyId String @db.Uuid
   name String
@@ -159,10 +161,30 @@ model Category {
   @@unique([companyId,name])
 }
 model Product {
+  stockDocumentItems StockDocumentItem[]
   id String @id @default(uuid()) @db.Uuid
   companyId String @db.Uuid
   code String
   barcode String?
+  subtitle String?
+  isbn10 String?
+  isbn13 String?
+  author String?
+  coauthor String?
+  publisher String?
+  imprint String?
+  edition String?
+  publicationYear Int?
+  language String?
+  genre String?
+  pages Int?
+  format String?
+  coverType String?
+  weightGrams Int?
+  dimensions String?
+  coverUrl String?
+  synopsis String?
+  identifiers ProductIdentifier[]
   description String
   categoryId String? @db.Uuid
   supplierId String? @db.Uuid
@@ -192,8 +214,11 @@ model Product {
   @@unique([companyId,code])
   @@unique([companyId,barcode])
   @@index([companyId,description])
+  @@index([companyId,author])
+  @@index([companyId,publisher])
 }
 model Warehouse {
+  stockDocuments StockDocument[]
   id String @id @default(uuid()) @db.Uuid
   companyId String @db.Uuid
   branchId String @db.Uuid
@@ -205,6 +230,8 @@ model Warehouse {
   @@unique([companyId,id])
 }
 model StockBalance {
+  minStock Decimal? @db.Decimal(14,3)
+  location String?
   companyId String @db.Uuid
   warehouseId String @db.Uuid
   productId String @db.Uuid
@@ -230,6 +257,10 @@ model StockMovement {
   quantity Decimal @db.Decimal(14,3)
   reason String
   transferGroup String? @db.Uuid
+  beforeQuantity Decimal? @db.Decimal(14,3)
+  afterQuantity Decimal? @db.Decimal(14,3)
+  documentId String? @db.Uuid
+  document StockDocument? @relation(fields:[companyId,documentId],references:[companyId,id])
   createdAt DateTime @default(now())
   warehouse Warehouse @relation(fields:[companyId,warehouseId],references:[companyId,id])
   product Product @relation(fields:[companyId,productId],references:[companyId,id])
@@ -386,4 +417,48 @@ model AuditLog {
   actor Membership? @relation(fields:[companyId,actorId],references:[companyId,id])
   @@index([companyId,createdAt])
   @@index([companyId,module,recordId])
+}
+
+model ProductIdentifier {
+ companyId String @db.Uuid
+ value String
+ productId String @db.Uuid
+ product Product @relation(fields:[companyId,productId],references:[companyId,id],onDelete:Cascade)
+ @@id([companyId,value])
+ @@index([companyId,productId])
+}
+model StockDocument {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ warehouseId String @db.Uuid
+ actorId String @db.Uuid
+ supplierId String? @db.Uuid
+ kind String
+ requestKey String @db.Uuid
+ requestHash String
+ documentNumber String?
+ invoiceNumber String?
+ receivedAt DateTime @db.Date
+ notes String?
+ createdAt DateTime @default(now())
+ warehouse Warehouse @relation(fields:[companyId,warehouseId],references:[companyId,id])
+ actor Membership @relation(fields:[companyId,actorId],references:[companyId,id])
+ supplier Supplier? @relation(fields:[companyId,supplierId],references:[companyId,id])
+ items StockDocumentItem[]
+ movements StockMovement[]
+ @@unique([companyId,id])
+ @@unique([companyId,requestKey])
+ @@index([companyId,createdAt])
+}
+model StockDocumentItem {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ documentId String @db.Uuid
+ productId String @db.Uuid
+ title String
+ quantity Decimal @db.Decimal(14,3)
+ unitCost Decimal @db.Decimal(14,2)
+ document StockDocument @relation(fields:[companyId,documentId],references:[companyId,id])
+ product Product @relation(fields:[companyId,productId],references:[companyId,id])
+ @@unique([companyId,documentId,productId])
 }

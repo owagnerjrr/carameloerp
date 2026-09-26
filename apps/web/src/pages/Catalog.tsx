@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Plus, Search, Pencil, Users, Package } from "lucide-react";
 import { api, money, number, type Auth, type Page } from "../api";
 import { Loading, Empty, ErrorMessage, Modal, Pagination } from "../components";
-interface Row {
+export interface Row {
   id: string;
   name?: string;
   description?: string;
@@ -48,9 +48,27 @@ const customerFields: Field[] = [
   { name: "state", label: "UF (ex.: SP)", max: 2 },
 ];
 const productFields: Field[] = [
-  { name: "code", label: "Código interno", required: true, max: 40 },
+  { name: "description", label: "Título", required: true, max: 200 },
+  { name: "code", label: "SKU / código interno", required: true, max: 40 },
   { name: "barcode", label: "Código de barras", max: 40 },
-  { name: "description", label: "Descrição", required: true, max: 200 },
+  { name: "subtitle", label: "Subtítulo" },
+  { name: "isbn10", label: "ISBN-10" },
+  { name: "isbn13", label: "ISBN-13" },
+  { name: "author", label: "Autor" },
+  { name: "coauthor", label: "Coautores" },
+  { name: "publisher", label: "Editora" },
+  { name: "imprint", label: "Selo editorial" },
+  { name: "edition", label: "Edição" },
+  { name: "publicationYear", label: "Ano de publicação" },
+  { name: "language", label: "Idioma" },
+  { name: "genre", label: "Gênero" },
+  { name: "pages", label: "Número de páginas" },
+  { name: "format", label: "Formato" },
+  { name: "coverType", label: "Tipo de capa" },
+  { name: "weightGrams", label: "Peso (gramas)" },
+  { name: "dimensions", label: "Dimensões (cm)" },
+  { name: "coverUrl", label: "URL HTTPS da capa" },
+  { name: "synopsis", label: "Sinopse" },
   { name: "brand", label: "Marca", max: 80 },
   {
     name: "cost",
@@ -122,7 +140,7 @@ export function Catalog({
       <div className="page-heading">
         <div>
           <span className="eyebrow">CADASTROS</span>
-          <h1>{customers ? "Clientes" : "Produtos"}</h1>
+          <h1>{customers ? "Clientes" : "Livros"}</h1>
           <p>
             {customers
               ? "Boas relações começam com tudo organizado."
@@ -132,7 +150,7 @@ export function Catalog({
         {canWrite && (
           <button className="primary" onClick={() => setEditing(null)}>
             <Plus size={18} />
-            {customers ? "Novo cliente" : "Novo produto"}
+            {customers ? "Novo cliente" : "Novo livro"}
           </button>
         )}
       </div>
@@ -147,7 +165,7 @@ export function Catalog({
           <div className="catalog-title">
             {customers ? <Users size={21} /> : <Package size={21} />}
             <strong>
-              {customers ? "Todos os clientes" : "Todos os produtos"}
+              {customers ? "Todos os clientes" : "Todos os livros"}
             </strong>
             <span className="count-badge">{data?.total ?? 0}</span>
           </div>
@@ -161,13 +179,11 @@ export function Catalog({
           >
             <Search size={18} />
             <input
-              aria-label={
-                customers ? "Pesquisar clientes" : "Pesquisar produtos"
-              }
+              aria-label={customers ? "Pesquisar clientes" : "Pesquisar livros"}
               placeholder={
                 customers
                   ? "Buscar nome ou CPF/CNPJ"
-                  : "Descrição, código ou código de barras"
+                  : "Título, autor, ISBN ou SKU"
               }
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -271,8 +287,8 @@ export function Catalog({
       </section>
       {!customers && (
         <p className="helper-text">
-          O saldo de estoque é somente leitura nesta fase. Entradas, saídas e
-          ajustes serão feitos pelo módulo de estoque.
+          Saldos são calculados pelos depósitos autorizados. Use Estoque para
+          entradas, ajustes e histórico.
         </p>
       )}
       {editing !== undefined && (
@@ -290,16 +306,18 @@ export function Catalog({
     </>
   );
 }
-function CatalogForm({
+export function CatalogForm({
   kind,
   row,
   onClose,
   onSaved,
+  initialCode = "",
 }: {
   kind: "customers" | "products";
   row: Row | null;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (saved: Row) => void;
+  initialCode?: string;
 }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -326,11 +344,11 @@ function CatalogForm({
       values.supplierId = form.get("supplierId") || null;
     }
     try {
-      await api(`/${kind}${row ? `/${row.id}` : ""}`, {
+      const saved = await api<Row>(`/${kind}${row ? `/${row.id}` : ""}`, {
         method: row ? "PUT" : "POST",
         body: JSON.stringify(values),
       });
-      onSaved();
+      onSaved(saved);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -339,7 +357,7 @@ function CatalogForm({
   }
   return (
     <Modal
-      title={`${row ? "Editar" : "Novo"} ${customers ? "cliente" : "produto"}`}
+      title={`${row ? "Editar" : "Novo"} ${customers ? "cliente" : "livro"}`}
       onClose={onClose}
     >
       <form onSubmit={(e) => void submit(e)}>
@@ -357,7 +375,12 @@ function CatalogForm({
                 max={f.type === "number" ? 9999999999.99 : undefined}
                 step={f.step}
                 defaultValue={String(
-                  row?.[f.name] ?? (f.type === "number" ? "0" : ""),
+                  row?.[f.name] ??
+                    (f.name === "barcode"
+                      ? initialCode
+                      : f.type === "number"
+                        ? "0"
+                        : ""),
                 )}
               />
             </label>

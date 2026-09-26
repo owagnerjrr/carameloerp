@@ -8,11 +8,13 @@ Evoluções da base: troca de senha, recuperação por canal verificado, MFA, ge
 
 ## FASE 2 — Clientes + fornecedores + produtos
 
-Clientes e produtos possuem criação, edição, inativação, busca e paginação nesta entrega. Completar fornecedores, categorias e marcas; importação validada; verificação cadastral; histórico de alterações; tributações estruturadas; leitor de código de barras. Categorias e fornecedores estão disponíveis no seed para vincular produtos.
+Clientes e livros possuem criação, edição, inativação, busca e paginação. Entregues metadados bibliográficos, ISBN-10/13 normalizados, índice de identificadores e leitura USB por teclado+Enter. Completar gestão de fornecedores/categorias/filiais, importação e tributação estruturada. Autores/editoras são textos nesta etapa; catálogo relacional editorial e API bibliográfica ficam para evolução.
 
 ## FASE 3 — Estoque
 
-Entradas, saídas, ajustes, transferências entre depósitos, inventário, rastreio e auditoria transacional. Controle de concorrência, estoque mínimo, produtos parados, relatórios, lotes e política de estoque negativo. Nenhuma alteração de saldo por edição direta de produto.
+Entregues entradas de livros por leitor ou seleção manual, leitura repetida, resumo/confirmacão, saldos por depósito/filial, total autorizado da rede, consulta/filtros, histórico com origem/antes/depois/usuário, ajuste por contagem e motivo. Transações, rollback, idempotência e locks de depósito protegem as operações. Acesso pode ser restrito por filial.
+
+Pendentes: saída operacional, transferências com trânsito/recebimento, inventário como documento completo, reposição avançada, edição de mínimo/localização específica por depósito, produtos parados, relatórios e lotes. A contagem para ajuste não substitui um módulo de inventário. Nenhuma alteração de saldo por edição direta de produto.
 
 ## FASE 4 — Vendas
 

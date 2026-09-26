@@ -3,6 +3,7 @@ import { Plus, Pencil, ShieldCheck } from "lucide-react";
 import { api, dateTime, type Auth, type Page } from "../api";
 import { Loading, ErrorMessage, Empty, Modal, Pagination } from "../components";
 interface Member {
+  branchId?: string | null;
   id: string;
   active: boolean;
   user: { name: string; email: string };
@@ -163,6 +164,14 @@ function UserForm({
   onSaved: () => void;
 }) {
   const [error, setError] = useState("");
+  const [branches, setBranches] = useState<Array<{ id: string; name: string }>>(
+    [],
+  );
+  useEffect(() => {
+    api<Array<{ id: string; name: string }>>("/branches")
+      .then(setBranches)
+      .catch((e) => setError(e.message));
+  }, []);
   const [busy, setBusy] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -172,6 +181,7 @@ function UserForm({
       new FormData(event.currentTarget),
     );
     if (member) values.active = values.active === "true";
+    values.branchId = values.branchId || null;
     try {
       await api(`/users${member ? `/${member.id}` : ""}`, {
         method: member ? "PATCH" : "POST",
@@ -236,6 +246,21 @@ function UserForm({
               </select>
             </label>
           )}
+          <label>
+            Filial autorizada
+            <select name="branchId" defaultValue={member?.branchId ?? ""}>
+              <option value="">Todas as filiais</option>
+              {branches.map((b) => (
+                <option value={b.id} key={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+            <small>
+              Administrador possui acesso à empresa inteira. Perfis restritos
+              não acessam o dashboard financeiro consolidado.
+            </small>
+          </label>
         </div>
         {member && (
           <p className="helper-text">

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { bookFields, isbn10to13 } from "./books.js";
+export * from "./books.js";
 export const permissions = [
   "dashboard:read",
   "customers:read",
@@ -7,11 +9,17 @@ export const permissions = [
   "products:write",
   "users:manage",
   "audit:read",
+  "stock:read",
+  "stock:receive",
+  "stock:adjust",
 ] as const;
 export type PermissionCode = (typeof permissions)[number];
 export const rolePermissions: Record<string, readonly PermissionCode[]> = {
   Administrador: permissions,
   Gerente: [
+    "stock:read",
+    "stock:receive",
+    "stock:adjust",
     "dashboard:read",
     "customers:read",
     "customers:write",
@@ -21,7 +29,13 @@ export const rolePermissions: Record<string, readonly PermissionCode[]> = {
   ],
   Financeiro: ["dashboard:read", "customers:read"],
   Vendedor: ["customers:read", "customers:write", "products:read"],
-  Estoque: ["products:read", "products:write"],
+  Estoque: [
+    "products:read",
+    "products:write",
+    "stock:read",
+    "stock:receive",
+    "stock:adjust",
+  ],
   Fiscal: ["customers:read", "products:read"],
 };
 const optionalText = (max = 200) =>
@@ -127,6 +141,7 @@ const fiscalCode = (length: number) =>
   );
 export const productSchema = z
   .object({
+    ...bookFields,
     code: z.string().trim().min(1).max(40),
     barcode: optionalText(40),
     description: z.string().trim().min(2).max(200),
@@ -148,7 +163,11 @@ export const productSchema = z
     csosn: fiscalCode(3),
     active: z.boolean().default(true),
   })
-  .strict();
+  .strict()
+  .refine(
+    (v) => !v.isbn10 || !v.isbn13 || isbn10to13(v.isbn10) === v.isbn13,
+    "ISBN-10 e ISBN-13 devem identificar a mesma edição",
+  );
 export const loginSchema = z
   .object({
     company: z.string().trim().min(1).max(80),
@@ -168,10 +187,15 @@ export const createUserSchema = z
       .transform((v) => v.toLowerCase()),
     password: z.string().min(12).max(128),
     roleId: z.uuid(),
+    branchId: z.uuid().nullable().optional(),
   })
   .strict();
 export const updateUserSchema = z
-  .object({ roleId: z.uuid(), active: z.boolean() })
+  .object({
+    roleId: z.uuid(),
+    active: z.boolean(),
+    branchId: z.uuid().nullable().optional(),
+  })
   .strict();
 export const listSchema = z.object({
   q: z.string().trim().max(100).default(""),

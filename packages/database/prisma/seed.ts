@@ -1,3 +1,4 @@
+import { saveIdentifiers } from "../../../apps/api/src/services/books.js";
 import { config } from "dotenv";
 import { resolve } from "node:path";
 import { createDatabase } from "../src/index.js";
@@ -25,11 +26,11 @@ try {
     await db.$transaction(
       async (tx) => {
         const company = await tx.company.create({
-          data: { name: "Caramelo Comércio LTDA", slug: "caramelo-demo" },
+          data: { name: "Caramelo Livrarias LTDA", slug: "caramelo-demo" },
         });
         const companyId = company.id;
         const branch = await tx.branch.create({
-          data: { companyId, name: "Matriz" },
+          data: { companyId, name: "Caramelo — Três Corações" },
         });
         for (const code of permissions)
           await tx.permission.upsert({
@@ -81,7 +82,7 @@ try {
           },
         });
         const category = await tx.category.create({
-          data: { companyId, name: "Mercearia" },
+          data: { companyId, name: "Literatura" },
         });
         const today = new Date(
           new Intl.DateTimeFormat("en-CA", {
@@ -118,12 +119,12 @@ try {
         }
         const products = [];
         for (const [i, [description, cost, price, quantity, minStock]] of [
-          "Café especial 500 g|18.50|32.90|8|10",
-          "Biscoito artesanal 200 g|7.20|14.90|42|12",
-          "Mel silvestre 300 g|14.00|26.50|5|8",
-          "Granola integral 400 g|12.00|24.90|34|10",
-          "Chocolate 70% 100 g|8.50|18.90|0|8",
-          "Chá de camomila 30 g|5.00|12.50|56|15",
+          "Dom Casmurro|20.00|39.90|8|10",
+          "O Pequeno Príncipe|18.00|34.90|42|12",
+          "1984|25.00|49.90|5|8",
+          "Livro de contos — demonstração|20.00|39.90|34|10",
+          "Livro de poesia — demonstração|20.00|39.90|0|8",
+          "Livro infantil — demonstração|20.00|39.90|56|15",
         ]
           .map((v) => v.split("|"))
           .entries()) {
@@ -132,6 +133,14 @@ try {
               companyId,
               code: `CRM-${String(i + 1).padStart(3, "0")}`,
               description: description!,
+              barcode: `DEMO-LIVRO-${i + 1}`,
+              author:
+                [
+                  "Machado de Assis",
+                  "Antoine de Saint-Exupéry",
+                  "George Orwell",
+                ][i] ?? "Autor fictício",
+              publisher: "Editora demonstração (não representa edição real)",
               cost: cost!,
               price: price!,
               minStock: minStock!,
@@ -141,6 +150,7 @@ try {
               location: `A-${i + 1}`,
             },
           });
+          await saveIdentifiers(tx, companyId, product);
           products.push(product);
           await tx.stockBalance.create({
             data: {

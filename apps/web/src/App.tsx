@@ -1,3 +1,4 @@
+import { StockPage } from "./pages/Stock";
 import { useEffect, useState, lazy, Suspense, type FormEvent } from "react";
 import {
   LayoutDashboard,
@@ -35,6 +36,7 @@ const AuditPage = lazy(() =>
   import("./pages/Administration").then((m) => ({ default: m.AuditPage })),
 );
 const pages = [
+  { id: "stock", label: "Estoque", icon: Layers, permission: "stock:read" },
   {
     id: "dashboard",
     label: "Visão geral",
@@ -49,7 +51,7 @@ const pages = [
   },
   {
     id: "products",
-    label: "Produtos",
+    label: "Livros",
     icon: Package,
     permission: "products:read",
   },
@@ -154,8 +156,9 @@ export function App() {
           {pages
             .filter(
               (p) =>
-                ["dashboard", "customers", "products"].includes(p.id) &&
-                auth.permissions.includes(p.permission),
+                ["dashboard", "customers", "products", "stock"].includes(
+                  p.id,
+                ) && auth.permissions.includes(p.permission),
             )
             .map((p) => (
               <button
@@ -173,7 +176,6 @@ export function App() {
         <span className="nav-label future-label">PRÓXIMAS ETAPAS</span>
         <div className="future-nav">
           {[
-            { label: "Estoque", icon: Layers },
             { label: "Vendas", icon: ShoppingBag },
             { label: "Financeiro", icon: Wallet },
             { label: "Relatórios", icon: ChartNoAxesCombined },
@@ -280,6 +282,8 @@ export function App() {
               <Catalog key={page} kind={page} auth={auth} />
             ) : page === "users" ? (
               <UsersPage auth={auth} />
+            ) : page === "stock" ? (
+              <StockPage auth={auth} />
             ) : page === "audit" ? (
               <AuditPage />
             ) : (

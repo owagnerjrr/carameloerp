@@ -1,3 +1,5 @@
+import { identifier } from "@caramelo/contracts";
+import { saveIdentifiers } from "../services/books.js";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { customerSchema, productSchema, listSchema } from "@caramelo/contracts";
@@ -57,8 +59,23 @@ export async function catalogRoutes(app: FastifyInstance, db: Database) {
       return row;
     });
   });
+  app.get("/api/products/lookup", async (request) => {
+    const auth = requirePermission(request, "products:read");
+    const { code } = z
+      .object({ code: z.string().trim().min(1).max(80) })
+      .parse(request.query);
+    const found = await db.productIdentifier.findUnique({
+      where: {
+        companyId_value: { companyId: auth.companyId, value: identifier(code) },
+      },
+      include: { product: true },
+    });
+    if (!found || !found.product.active)
+      throw new HttpError(404, "Livro não encontrado.");
+    return found.product;
+  });
   app.get("/api/products", async (request) => {
-    const { companyId } = requirePermission(request, "products:read");
+    const { companyId, branchId } = requirePermission(request, "products:read");
     const { q, page, limit } = listSchema.parse(request.query);
     const where = {
       companyId,
@@ -66,12 +83,21 @@ export async function catalogRoutes(app: FastifyInstance, db: Database) {
         { description: { contains: q, mode: "insensitive" as const } },
         { code: { contains: q, mode: "insensitive" as const } },
         { barcode: { contains: q } },
+        { isbn13: { contains: q } },
+        { isbn10: { contains: q } },
+        { author: { contains: q, mode: "insensitive" as const } },
+        { publisher: { contains: q, mode: "insensitive" as const } },
+        { identifiers: { some: { value: identifier(q) } } },
       ],
     };
     const [items, total] = await db.$transaction([
       db.product.findMany({
         where,
-        include: { category: true, supplier: true, balances: true },
+        include: {
+          category: true,
+          supplier: true,
+          balances: { where: branchId ? { warehouse: { branchId } } : {} },
+        },
         orderBy: { description: "asc" },
         skip: (page - 1) * limit,
         take: limit,
@@ -133,6 +159,7 @@ export async function catalogRoutes(app: FastifyInstance, db: Database) {
       const row = await tx.product.create({
         data: { ...data, companyId: auth.companyId },
       });
+      await saveIdentifiers(tx, auth.companyId, row);
       await audit(tx, auth, "CREATE", "products", row.id);
       return row;
     });
@@ -154,6 +181,7 @@ export async function catalogRoutes(app: FastifyInstance, db: Database) {
         where: { companyId_id: { companyId: auth.companyId, id } },
         data,
       });
+      await saveIdentifiers(tx, auth.companyId, row);
       await audit(tx, auth, "UPDATE", "products", id);
       return row;
     });

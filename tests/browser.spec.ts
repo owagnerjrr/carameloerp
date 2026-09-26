@@ -18,9 +18,8 @@ test("login, dashboard, cadastros, administração e logout", async ({
     page.getByRole("heading", { name: "Olá, Administrador." }),
   ).toBeVisible();
   await expect(page.getByText("Fluxo de caixa", { exact: true })).toBeVisible();
-  await expect(
-    page.getByText("R$ 0,00", { exact: true }).first(),
-  ).not.toBeVisible();
+  // Zero is valid when the current day has no sales; assert the dashboard loaded.
+  await expect(page.getByText("Vendas de hoje", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "30 dias", exact: true }).click();
   await expect(page.getByText("Fluxo de caixa", { exact: true })).toBeVisible();
   await page.screenshot({
@@ -53,11 +52,11 @@ test("login, dashboard, cadastros, administração e logout", async ({
   await expect(
     page.getByRole("cell").filter({ hasText: "Mercado Aurora" }),
   ).toBeVisible();
-  await nav("Produtos");
+  await nav("Livros");
   await expect(
-    page.getByRole("heading", { name: "Produtos", exact: true }),
+    page.getByRole("heading", { name: "Livros", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Novo produto", exact: true }).click();
+  await page.getByRole("button", { name: "Novo livro", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("button", { name: "Cancelar", exact: true }).click();
   await nav("Usuários e perfis");

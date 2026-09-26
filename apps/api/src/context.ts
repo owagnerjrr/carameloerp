@@ -1,6 +1,7 @@
 import type { FastifyRequest } from "fastify";
 import type { Database } from "@caramelo/database";
 export interface AuthContext {
+  branchId?: string | null;
   companyId: string;
   membershipId: string;
   userId: string;

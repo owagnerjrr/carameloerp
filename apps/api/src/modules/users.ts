@@ -9,6 +9,14 @@ import {
 import { requirePermission, HttpError, audit } from "../context.js";
 import { hashPassword } from "../security.js";
 export async function userRoutes(app: FastifyInstance, db: Database) {
+  app.get("/api/branches", async (request) => {
+    const auth = requirePermission(request, "users:manage");
+    return db.branch.findMany({
+      where: { companyId: auth.companyId },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    });
+  });
   app.get("/api/roles", async (request) => {
     const { companyId } = requirePermission(request, "users:manage");
     return db.role.findMany({
@@ -26,6 +34,7 @@ export async function userRoutes(app: FastifyInstance, db: Database) {
         select: {
           id: true,
           active: true,
+          branchId: true,
           role: { select: { id: true, name: true } },
           user: { select: { name: true, email: true } },
         },
@@ -40,6 +49,13 @@ export async function userRoutes(app: FastifyInstance, db: Database) {
   app.post("/api/users", async (request, reply) => {
     const auth = requirePermission(request, "users:manage");
     const data = createUserSchema.parse(request.body);
+    if (
+      data.branchId &&
+      !(await db.branch.findFirst({
+        where: { id: data.branchId, companyId: auth.companyId },
+      }))
+    )
+      throw new HttpError(400, "Filial inválida.");
     if (
       !(await db.role.findUnique({
         where: { companyId_id: { companyId: auth.companyId, id: data.roleId } },
@@ -61,6 +77,7 @@ export async function userRoutes(app: FastifyInstance, db: Database) {
           companyId: auth.companyId,
           userId: user.id,
           roleId: data.roleId,
+          branchId: data.branchId,
         },
       });
       await audit(tx, auth, "CREATE", "users", member.id);
@@ -72,6 +89,13 @@ export async function userRoutes(app: FastifyInstance, db: Database) {
     const auth = requirePermission(request, "users:manage");
     const { id } = z.object({ id: z.uuid() }).parse(request.params);
     const data = updateUserSchema.parse(request.body);
+    if (
+      data.branchId &&
+      !(await db.branch.findFirst({
+        where: { id: data.branchId, companyId: auth.companyId },
+      }))
+    )
+      throw new HttpError(400, "Filial inválida.");
     if (id === auth.membershipId)
       throw new HttpError(400, "Você não pode alterar seu próprio acesso.");
     return db.$transaction(async (tx) => {
@@ -112,17 +136,28 @@ export async function userRoutes(app: FastifyInstance, db: Database) {
     });
   });
   app.get("/api/audit", async (request) => {
-    const { companyId } = requirePermission(request, "audit:read");
+    const { companyId, branchId } = requirePermission(request, "audit:read");
+    const where = {
+      companyId,
+      ...(branchId
+        ? {
+            OR: [
+              { module: { not: "stock" } },
+              { metadata: { path: ["branchId"], equals: branchId } },
+            ],
+          }
+        : {}),
+    };
     const { page, limit } = listSchema.parse(request.query);
     const [items, total] = await db.$transaction([
       db.auditLog.findMany({
-        where: { companyId },
+        where,
         include: { actor: { select: { user: { select: { name: true } } } } },
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
       }),
-      db.auditLog.count({ where: { companyId } }),
+      db.auditLog.count({ where }),
     ]);
     return { items, total, page, limit };
   });
