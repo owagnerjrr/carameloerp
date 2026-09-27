@@ -11,6 +11,7 @@ import { catalogRoutes } from "./modules/catalog.js";
 import { userRoutes } from "./modules/users.js";
 import { dashboardRoutes } from "./modules/dashboard.js";
 import { stockRoutes } from "./modules/stock.js";
+import { salesRoutes } from "./modules/sales.js";
 export interface AppOptions {
   db: Database;
   origin: string;
@@ -133,5 +134,6 @@ export async function buildApp(options: AppOptions) {
   await userRoutes(app, options.db);
   await dashboardRoutes(app, options.db);
   await stockRoutes(app, options.db);
+  await salesRoutes(app, options.db);
   return app;
 }

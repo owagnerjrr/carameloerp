@@ -18,7 +18,7 @@ export async function warehouseAccess(
   if (!warehouse) throw new HttpError(404, "Depósito/filial indisponível.");
   return warehouse;
 }
-async function lock(tx: Transaction, key: string) {
+export async function lock(tx: Transaction, key: string) {
   await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended(${key},0))`;
 }
 /** Must run inside the caller transaction. All balance mutations use this service. */
@@ -29,7 +29,8 @@ export async function moveStock(
     warehouseId: string;
     productId: string;
     delta: Prisma.Decimal;
-    documentId: string;
+    documentId?: string;
+    saleId?: string;
     reason: string;
     type: "IN" | "OUT" | "ADJUSTMENT";
   },
@@ -46,8 +47,7 @@ export async function moveStock(
   });
   const before = balance?.quantity ?? new Prisma.Decimal(0),
     after = before.plus(input.delta);
-  if (after.isNegative())
-    throw new HttpError(409, "Saldo insuficiente para a operação.");
+  if (after.isNegative()) throw new HttpError(409, "Estoque insuficiente.");
   if (input.delta.isZero())
     throw new HttpError(400, "A operação não altera o saldo.");
   await tx.stockBalance.upsert({
@@ -64,6 +64,7 @@ export async function moveStock(
       beforeQuantity: before,
       afterQuantity: after,
       documentId: input.documentId,
+      saleId: input.saleId,
       reason: input.reason,
     },
   });

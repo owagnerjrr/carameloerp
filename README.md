@@ -1,6 +1,6 @@
 # Caramelo ERP
 
-ERP web para uma **rede de livrarias brasileiras**. Interface em português e base modular preparada para evoluir para SaaS. Esta etapa entrega livros, entrada e estoque por filial; não é um ERP completo nem um serviço pronto para comercialização.
+ERP web para uma **rede de livrarias brasileiras**. Interface em português e base modular preparada para evoluir para SaaS. Esta etapa entrega livros, entrada/estoque por filial e PDV operacional; não é um ERP completo nem um serviço pronto para comercialização.
 
 ## O que já funciona
 
@@ -14,7 +14,13 @@ ERP web para uma **rede de livrarias brasileiras**. Interface em português e ba
 - Auditoria de login, cadastros e mudanças de acesso, sem segredos ou conteúdo integral dos registros.
 - Migrations, seed fictício, testes de API com PostgreSQL real, testes de navegador, lint, build e CI.
 
-Entradas e ajustes de estoque são operacionais e persistem no PostgreSQL. Vendas, pagamentos e fiscal continuam sem operações: seus modelos e dados de seed não significam PDV, integração financeira ou emissão real. Esses menus permanecem “Em breve”.
+Entradas, ajustes, vendas e cancelamentos são operacionais e persistem no PostgreSQL. O PDV registra pagamentos manuais e financeiro básico; não há emissão fiscal, integração bancária ou TEF.
+
+## PDV e vendas
+
+Abra **PDV / Vendas**, escolha filial/depósito, leia código+Enter ou pesquise o livro, informe cliente opcional, descontos e pagamentos. Confirme o resumo para gravar venda, itens, pagamentos, baixa de estoque, financeiro/caixa e auditoria em uma única transação. O carrinho não altera saldo. Dinheiro calcula troco; PIX/débito/crédito exigem confirmação manual externa; crédito admite parcelas e pagamentos mistos fecham exatamente o total.
+
+Histórico permite filtros e detalhes. Cancelamento autorizado exige motivo, recompõe estoque, cancela recebíveis e compensa o caixa, mantendo a venda e sua auditoria. Migration aditiva: `202609260002_pdv_sales`. Guia completo, regras de desconto/parcelas, endpoints, limites e testes: [docs/PDV.md](docs/PDV.md). Decisão arquitetural: [docs/PDV-ARQUITETURA.md](docs/PDV-ARQUITETURA.md).
 
 ## Livros, leitura e entrada de mercadoria
 
@@ -195,13 +201,14 @@ Não use o seed ou o PostgreSQL portátil em produção. Ainda faltam provisiona
 ```text
 apps/
   api/src/
-    modules/            auth, users, catalog, dashboard
+    modules/            auth, users, catalog, dashboard, stock, sales
+    services/           domínio transacional de estoque e vendas
     integrations/       contratos sem provedores fictícios
     app.ts              composição HTTP e políticas de segurança
     context.ts          autorização e auditoria
     security.ts         hashes e tokens
   web/src/
-    pages/              dashboard, cadastros, administração
+    pages/              dashboard, cadastros, administração, estoque, PDV
     App.tsx             login e shell responsivo
     api.ts              cliente HTTP
     components.tsx      elementos compartilhados
@@ -222,4 +229,4 @@ Tenant é obtido da sessão, nunca do corpo da requisição. Consultas filtram `
 
 A política de perfis está definida no código e persistida por empresa. Há seleção de perfil por usuário; editor de permissões customizadas não está incluído. Administradores não podem anexar silenciosamente uma identidade de outra empresa: convites e aceite do usuário ficam para a evolução SaaS. Estoque é somente leitura nos cadastros; margem é `(preço - custo) / preço`, com zero quando o preço for zero.
 
-As contas a pagar/receber compartilham o modelo `FinancialEntry`, diferenciadas por tipo; isso evita duplicação. Sua API operacional, parcelamento, recorrência e conciliação pertencem às fases futuras. Campos fiscais são apenas cadastro; não constituem cálculo tributário ou emissão homologada.
+As contas a pagar/receber compartilham o modelo `FinancialEntry`, diferenciadas por tipo; isso evita duplicação. O PDV cria recebíveis e parcelas reais de cartão; gestão financeira independente, baixas, recorrência e conciliação pertencem às fases futuras. Campos fiscais são apenas cadastro; não constituem cálculo tributário ou emissão homologada.

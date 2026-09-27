@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { bookFields, isbn10to13 } from "./books.js";
 export * from "./books.js";
+export * from "./sales.js";
 export const permissions = [
   "dashboard:read",
   "customers:read",
@@ -12,11 +13,19 @@ export const permissions = [
   "stock:read",
   "stock:receive",
   "stock:adjust",
+  "sales:read",
+  "sales:create",
+  "sales:discount",
+  "sales:cancel",
 ] as const;
 export type PermissionCode = (typeof permissions)[number];
 export const rolePermissions: Record<string, readonly PermissionCode[]> = {
   Administrador: permissions,
   Gerente: [
+    "sales:read",
+    "sales:create",
+    "sales:discount",
+    "sales:cancel",
     "stock:read",
     "stock:receive",
     "stock:adjust",
@@ -28,7 +37,14 @@ export const rolePermissions: Record<string, readonly PermissionCode[]> = {
     "audit:read",
   ],
   Financeiro: ["dashboard:read", "customers:read"],
-  Vendedor: ["customers:read", "customers:write", "products:read"],
+  Vendedor: [
+    "customers:read",
+    "customers:write",
+    "products:read",
+    "sales:read",
+    "sales:create",
+    "sales:discount",
+  ],
   Estoque: [
     "products:read",
     "products:write",

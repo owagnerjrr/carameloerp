@@ -1,7 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "tests",
-  testMatch: ["browser.spec.ts", "stock.browser.spec.ts"],
+  testMatch: [
+    "browser.spec.ts",
+    "stock.browser.spec.ts",
+    "sales.browser.spec.ts",
+  ],
   workers: 1,
   reporter: "list",
   use: { baseURL: "http://localhost:5173", trace: "retain-on-failure" },

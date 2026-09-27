@@ -28,6 +28,8 @@ model Company {
   auditLogs AuditLog[]
 }
 model Branch {
+  financialEntries FinancialEntry[]
+  cashRegisters CashRegister[]
   id String @id @default(uuid()) @db.Uuid
   companyId String @db.Uuid
   name String
@@ -81,7 +83,8 @@ model Membership {
   role Role @relation(fields:[companyId,roleId],references:[companyId,id])
   branch Branch? @relation(fields:[companyId,branchId],references:[companyId,id])
   sessions Session[]
-  sales Sale[]
+  sales Sale[] @relation("SaleSeller")
+  cancelledSales Sale[] @relation("SaleCanceller")
   stockMovements StockMovement[]
   auditLogs AuditLog[]
   @@unique([companyId,id])
@@ -218,6 +221,7 @@ model Product {
   @@index([companyId,publisher])
 }
 model Warehouse {
+  sales Sale[]
   stockDocuments StockDocument[]
   id String @id @default(uuid()) @db.Uuid
   companyId String @db.Uuid
@@ -248,6 +252,9 @@ enum StockMovementType {
   TRANSFER
 }
 model StockMovement {
+ saleId String? @db.Uuid
+ sale Sale? @relation(fields:[companyId,saleId],references:[companyId,id])
+ @@unique([companyId,saleId,productId,type])
   id String @id @default(uuid()) @db.Uuid
   companyId String @db.Uuid
   warehouseId String @db.Uuid
@@ -276,6 +283,20 @@ enum SaleStatus {
   RETURNED
 }
 model Sale {
+ warehouseId String? @db.Uuid
+ requestKey String? @db.Uuid
+ requestHash String?
+ subtotal Decimal? @db.Decimal(14,2)
+ cancelledAt DateTime?
+ cancelReason String?
+ cancelledById String? @db.Uuid
+ cancelRequestKey String? @db.Uuid
+ warehouse Warehouse? @relation(fields:[companyId,warehouseId],references:[companyId,id])
+ cancelledBy Membership? @relation("SaleCanceller",fields:[companyId,cancelledById],references:[companyId,id])
+ movements StockMovement[]
+ cashMovements CashMovement[]
+ @@unique([companyId,requestKey])
+ @@unique([companyId,cancelRequestKey])
   id String @id @default(uuid()) @db.Uuid
   companyId String @db.Uuid
   branchId String @db.Uuid
@@ -289,7 +310,7 @@ model Sale {
   company Company @relation(fields:[companyId],references:[id])
   branch Branch @relation(fields:[companyId,branchId],references:[companyId,id])
   customer Customer? @relation(fields:[companyId,customerId],references:[companyId,id])
-  seller Membership @relation(fields:[companyId,sellerId],references:[companyId,id])
+  seller Membership @relation("SaleSeller",fields:[companyId,sellerId],references:[companyId,id])
   items SaleItem[]
   payments Payment[]
   financialEntries FinancialEntry[]
@@ -299,6 +320,8 @@ model Sale {
   @@index([companyId,status,createdAt])
 }
 model SaleItem {
+  isbn String?
+  author String?
   id String @id @default(uuid()) @db.Uuid
   companyId String @db.Uuid
   saleId String @db.Uuid
@@ -322,6 +345,15 @@ enum PaymentMethod {
   OTHER
 }
 model Payment {
+ receivedAmount Decimal? @db.Decimal(14,2)
+ change Decimal @default(0) @db.Decimal(14,2)
+ installments Int @default(1)
+ cardBrand String?
+ reference String?
+ reversedAt DateTime?
+ financialEntries FinancialEntry[]
+ cashMovements CashMovement[]
+ @@unique([companyId,id])
   id String @id @default(uuid()) @db.Uuid
   companyId String @db.Uuid
   saleId String @db.Uuid
@@ -341,6 +373,12 @@ enum EntryStatus {
   CANCELLED
 }
 model FinancialEntry {
+ branchId String? @db.Uuid
+ paymentId String? @db.Uuid
+ installment Int?
+ branch Branch? @relation(fields:[companyId,branchId],references:[companyId,id])
+ payment Payment? @relation(fields:[companyId,paymentId],references:[companyId,id])
+ @@unique([companyId,paymentId,installment])
   id String @id @default(uuid()) @db.Uuid
   companyId String @db.Uuid
   saleId String? @db.Uuid
@@ -367,6 +405,9 @@ model BankAccount {
   @@unique([companyId,id])
 }
 model CashRegister {
+ branchId String? @db.Uuid
+ branch Branch? @relation(fields:[companyId,branchId],references:[companyId,id])
+ @@unique([companyId,branchId])
   id String @id @default(uuid()) @db.Uuid
   companyId String @db.Uuid
   name String
@@ -375,6 +416,12 @@ model CashRegister {
   @@unique([companyId,id])
 }
 model CashMovement {
+ saleId String? @db.Uuid
+ paymentId String? @db.Uuid
+ kind String @default("LEGACY")
+ sale Sale? @relation(fields:[companyId,saleId],references:[companyId,id])
+ payment Payment? @relation(fields:[companyId,paymentId],references:[companyId,id])
+ @@unique([companyId,paymentId,kind])
   id String @id @default(uuid()) @db.Uuid
   companyId String @db.Uuid
   cashRegisterId String @db.Uuid

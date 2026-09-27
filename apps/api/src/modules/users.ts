@@ -142,7 +142,7 @@ export async function userRoutes(app: FastifyInstance, db: Database) {
       ...(branchId
         ? {
             OR: [
-              { module: { not: "stock" } },
+              { module: { notIn: ["stock", "sales"] } },
               { metadata: { path: ["branchId"], equals: branchId } },
             ],
           }

@@ -141,6 +141,7 @@ export async function stockRoutes(app: FastifyInstance, db: Database) {
       db.stockMovement.findMany({
         where,
         include: {
+          sale: { select: { id: true, number: true, status: true } },
           warehouse: { include: { branch: true } },
           actor: { include: { user: { select: { name: true } } } },
           document: { select: { id: true, kind: true, documentNumber: true } },

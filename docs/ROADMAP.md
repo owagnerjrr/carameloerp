@@ -14,11 +14,13 @@ Clientes e livros possuem criação, edição, inativação, busca e paginação
 
 Entregues entradas de livros por leitor ou seleção manual, leitura repetida, resumo/confirmacão, saldos por depósito/filial, total autorizado da rede, consulta/filtros, histórico com origem/antes/depois/usuário, ajuste por contagem e motivo. Transações, rollback, idempotência e locks de depósito protegem as operações. Acesso pode ser restrito por filial.
 
-Pendentes: saída operacional, transferências com trânsito/recebimento, inventário como documento completo, reposição avançada, edição de mínimo/localização específica por depósito, produtos parados, relatórios e lotes. A contagem para ajuste não substitui um módulo de inventário. Nenhuma alteração de saldo por edição direta de produto.
+Pendentes: saída avulsa (baixa por venda já entregue), transferências com trânsito/recebimento, inventário como documento completo, reposição avançada, edição de mínimo/localização específica por depósito, produtos parados, relatórios e lotes. A contagem para ajuste não substitui um módulo de inventário. Nenhuma alteração de saldo por edição direta de produto.
 
 ## FASE 4 — Vendas
 
-Orçamentos, pedidos, venda concluída, descontos, clientes, vendedores, formas de pagamento, cancelamentos e devoluções. Conclusão atômica e idempotente com estoque e financeiro. Pagamentos em dinheiro, PIX, débito/crédito, boleto, crediário e outros, sem confundir registro de pagamento com integração bancária real.
+Entregue PDV real: leitura ISBN/EAN/SKU+Enter, carrinho, cliente opcional/cadastro, descontos, dinheiro/troco, PIX manual, débito/crédito manual, parcelas, misto, confirmação atômica/idempotente com estoque e financeiro, histórico/detalhes e cancelamento com recomposição. Concorrência e rollback testados em PostgreSQL. Guia: [PDV.md](PDV.md).
+
+Pendentes: orçamento e pedido operacionais, devolução parcial, boleto/crediário/outras formas, gestão de turnos e impressão não fiscal. Integrações de pagamento dependem da fase 8.
 
 ## FASE 5 — Financeiro
 

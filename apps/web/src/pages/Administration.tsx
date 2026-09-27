@@ -130,6 +130,10 @@ export function UsersPage({ auth }: { auth: Auth }) {
                       "products:write": "Editar produtos",
                       "users:manage": "Gerenciar usuários",
                       "audit:read": "Consultar auditoria",
+                      "sales:read": "Consultar vendas",
+                      "sales:create": "Vender no PDV",
+                      "sales:discount": "Conceder descontos",
+                      "sales:cancel": "Cancelar vendas",
                     })[p.permissionCode] ?? p.permissionCode,
                 )
                 .join(" · ")}

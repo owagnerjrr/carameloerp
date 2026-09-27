@@ -35,7 +35,16 @@ const UsersPage = lazy(() =>
 const AuditPage = lazy(() =>
   import("./pages/Administration").then((m) => ({ default: m.AuditPage })),
 );
+const SalesPage = lazy(() =>
+  import("./pages/Sales").then((m) => ({ default: m.SalesPage })),
+);
 const pages = [
+  {
+    id: "sales",
+    label: "PDV / Vendas",
+    icon: ShoppingBag,
+    permission: "sales:read",
+  },
   { id: "stock", label: "Estoque", icon: Layers, permission: "stock:read" },
   {
     id: "dashboard",
@@ -156,9 +165,13 @@ export function App() {
           {pages
             .filter(
               (p) =>
-                ["dashboard", "customers", "products", "stock"].includes(
-                  p.id,
-                ) && auth.permissions.includes(p.permission),
+                [
+                  "dashboard",
+                  "customers",
+                  "products",
+                  "stock",
+                  "sales",
+                ].includes(p.id) && auth.permissions.includes(p.permission),
             )
             .map((p) => (
               <button
@@ -176,7 +189,6 @@ export function App() {
         <span className="nav-label future-label">PRÓXIMAS ETAPAS</span>
         <div className="future-nav">
           {[
-            { label: "Vendas", icon: ShoppingBag },
             { label: "Financeiro", icon: Wallet },
             { label: "Relatórios", icon: ChartNoAxesCombined },
             { label: "Fiscal", icon: FileText },
@@ -282,6 +294,8 @@ export function App() {
               <Catalog key={page} kind={page} auth={auth} />
             ) : page === "users" ? (
               <UsersPage auth={auth} />
+            ) : page === "sales" ? (
+              <SalesPage auth={auth} />
             ) : page === "stock" ? (
               <StockPage auth={auth} />
             ) : page === "audit" ? (

@@ -1,3 +1,4 @@
+import { useBarcodeReader } from "../useBarcodeReader";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { addScanned } from "@caramelo/contracts";
 import { api, ApiError, money, dateTime, type Auth, type Page } from "../api";
@@ -38,6 +39,7 @@ type Options = {
   categories: Array<{ id: string; name: string }>;
 };
 type Movement = {
+  sale?: { id: string; number: number; status: string } | null;
   id: string;
   createdAt: string;
   type: string;
@@ -305,45 +307,32 @@ function Entry({
     [manual, setManual] = useState(false),
     [results, setResults] = useState<Book[]>([]),
     [review, setReview] = useState(false),
-    [busy, setBusy] = useState(false),
-    [pending, setPending] = useState(0);
-  const input = useRef<HTMLInputElement>(null),
-    queue = useRef(Promise.resolve()),
-    key = useRef(crypto.randomUUID());
+    [busy, setBusy] = useState(false);
+  const key = useRef(crypto.randomUUID());
   const renew = () => {
     key.current = crypto.randomUUID();
     setMessage("");
   };
-  useEffect(() => {
-    if (active && !manual && !create && !review) input.current?.focus();
-  }, [active, manual, create, review]);
+
   const add = (book: Book) => {
     setRows((r) => addScanned(r, book, book.cost));
     renew();
   };
-  function scan(e: FormEvent) {
-    e.preventDefault();
-    const code = input.current!.value.trim();
-    input.current!.value = "";
-    input.current?.focus();
-    if (!code) return;
-    setPending((n) => n + 1);
-    queue.current = queue.current.then(async () => {
-      try {
-        const book = await api<Book>(
-          "/products/lookup?code=" + encodeURIComponent(code),
-        );
-        add(book);
-        setError("");
-        setUnknown("");
-      } catch (e) {
-        setError((e as Error).message);
-        if (e instanceof ApiError && e.status === 404) setUnknown(code);
-      } finally {
-        setPending((n) => n - 1);
-      }
-    });
-  }
+  const { input, pending, scan } = useBarcodeReader(
+    active && !manual && !create && !review && !busy,
+    async (code) => {
+      const book = await api<Book>(
+        "/products/lookup?code=" + encodeURIComponent(code),
+      );
+      add(book);
+      setError("");
+      setUnknown("");
+    },
+    (e, code) => {
+      setError(e.message);
+      if (e instanceof ApiError && e.status === 404) setUnknown(code);
+    },
+  );
   const total =
       rows.reduce(
         (n, r) => n + Math.round(Number(r.unitCost || 0) * 100) * r.quantity,
@@ -780,12 +769,20 @@ function History({ row, onClose }: { row: StockRow; onClose: () => void }) {
               <tr key={m.id}>
                 <td>{dateTime(m.createdAt)}</td>
                 <td>
-                  {m.document?.kind === "ENTRY" ? "ENTRADA_COMPRA" : m.type}
+                  {m.sale
+                    ? m.type === "OUT"
+                      ? "SAÍDA POR VENDA"
+                      : "CANCELAMENTO DE VENDA"
+                    : m.document?.kind === "ENTRY"
+                      ? "ENTRADA_COMPRA"
+                      : m.type}
                   <small>
-                    {m.document
-                      ? "Documento " +
-                        (m.document.documentNumber || m.document.id)
-                      : "Legado sem documento"}
+                    {m.sale
+                      ? "Venda #" + m.sale.number
+                      : m.document
+                        ? "Documento " +
+                          (m.document.documentNumber || m.document.id)
+                        : "Legado sem documento"}
                   </small>
                   <small>{m.reason}</small>
                 </td>

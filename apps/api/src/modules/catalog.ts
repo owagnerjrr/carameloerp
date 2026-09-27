@@ -15,6 +15,8 @@ export async function catalogRoutes(app: FastifyInstance, db: Database) {
       OR: [
         { name: { contains: q, mode: "insensitive" as const } },
         { document: { contains: q } },
+        { phone: { contains: q } },
+        { email: { contains: q, mode: "insensitive" as const } },
       ],
     };
     const [items, total] = await db.$transaction([
