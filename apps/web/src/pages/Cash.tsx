@@ -21,7 +21,8 @@ type Session = {
   expectedAmount: string | null;
   countedAmount: string | null;
   difference: string | null;
-  notes: string | null;
+  openingNotes: string | null;
+  closingNotes: string | null;
   cashRegister: { name: string };
   branch: { name: string };
   openedBy: { user: { name: string } };
@@ -320,13 +321,16 @@ export function CashPage({ auth }: { auth: Auth }) {
           >
             Atualizar resumo
           </button>
+          <p>
+            Observação de abertura: {detail.openingNotes ?? "Não informada"}
+          </p>
           <CashSummary value={detail.summary} />
           {detail.status === "CLOSED" && (
             <p className="stock-warning">
               Contado: {money(detail.countedAmount!)} · Diferença:{" "}
               <strong>{money(detail.difference!)}</strong>
               <br />
-              {detail.notes}
+              Fechamento: {detail.closingNotes}
             </p>
           )}
           <h3>Movimentações da sessão</h3>

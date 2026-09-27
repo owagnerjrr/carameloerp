@@ -1,3 +1,4 @@
+import { redeemCredits } from "./credits.js";
 import { cents, reais, splitCents, type Checkout } from "@caramelo/contracts";
 import type { CashSession, Sale } from "@caramelo/database";
 import { HttpError, type Transaction, type AuthContext } from "../context.js";
@@ -19,13 +20,15 @@ export function validatePayments(
   input: Pick<Checkout, "payments">,
   total: bigint,
 ) {
+  if (input.payments.filter((p) => p.method === "STORE_CREDIT").length > 1)
+    throw new HttpError(400, "Agrupe vale-crédito em um único pagamento.");
   if (input.payments.filter((p) => p.method === "CASH").length > 1)
     throw new HttpError(400, "Agrupe dinheiro em um único pagamento.");
   const payments = input.payments.map((p) => {
     const amount = cents(p.amount);
     if (amount <= 0n)
       throw new HttpError(400, "Pagamento deve ter valor positivo.");
-    if (p.method !== "CASH" && !p.confirmed)
+    if (p.method !== "CASH" && p.method !== "STORE_CREDIT" && !p.confirmed)
       throw new HttpError(400, "Confirme o recebimento externo do PIX/cartão.");
     if (p.method !== "CREDIT_CARD" && p.installments !== 1)
       throw new HttpError(400, "Parcelas somente para crédito.");
@@ -76,7 +79,11 @@ export async function recordPayments(
         paidAt: sale.createdAt,
       },
     });
-    const parts = splitCents(cents(p.amount), p.installments);
+    if (p.method === "STORE_CREDIT") await redeemCredits(tx, a, sale, p.amount);
+    const parts =
+      p.method === "STORE_CREDIT"
+        ? []
+        : splitCents(cents(p.amount), p.installments);
     for (const [i, value] of parts.entries()) {
       const due =
         p.method === "CREDIT_CARD"
@@ -94,6 +101,7 @@ export async function recordPayments(
           status: immediate ? "SETTLED" : "OPEN",
           description: `Venda #${sale.number} — ${p.method} — ${i + 1}/${parts.length}`,
           amount: reais(value),
+          settledAmount: immediate ? reais(value) : "0",
           dueDate: due,
           settledAt: immediate ? sale.createdAt : null,
           installment: i + 1,

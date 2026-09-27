@@ -1,3 +1,4 @@
+import { CreditBalance } from "./CreditBalance";
 import { useEffect, useRef, useState } from "react";
 import { api, money, dateTime, type Page, type Auth } from "../api";
 import { ErrorMessage, Modal, Pagination } from "../components";
@@ -20,7 +21,7 @@ type Original = {
   warehouseId: string | null;
   customerId: string | null;
   customer: { name: string } | null;
-  branch: { name: string };
+  branch: { id: string; name: string };
   seller: { user: { name: string } };
   cashSession: { cashRegister: { name: string } } | null;
   items: Array<{
@@ -692,7 +693,12 @@ export function ReturnForm({
                 {Number(quote.difference) > 0 && (
                   <>
                     <p>Receba manualmente a diferença antes de confirmar.</p>
+                    <CreditBalance
+                      customerId={customerId}
+                      branchId={sale?.branch.id}
+                    />
                     <PaymentFields
+                      allowStoreCredit={!!customerId}
                       payments={payments}
                       setPayments={setPayments}
                       busy={busy}

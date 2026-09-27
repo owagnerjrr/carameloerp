@@ -24,6 +24,8 @@ export async function dashboardRoutes(app: FastifyInstance, db: Database) {
       createdAt: { gte: start, lt: end },
     };
     const [
+      commercialCount,
+      dayCommercialCount,
       returnsPeriod,
       returnsDay,
       returnsMonth,
@@ -41,6 +43,15 @@ export async function dashboardRoutes(app: FastifyInstance, db: Database) {
       customerCount,
       productCount,
     ] = await Promise.all([
+      db.sale.count({ where: { ...where, exchangeOrigin: null } }),
+      db.sale.count({
+        where: {
+          companyId,
+          status: "COMPLETED",
+          exchangeOrigin: null,
+          createdAt: { gte: todayStart, lt: tomorrow },
+        },
+      }),
       db.returnOperation.aggregate({
         where: { companyId, createdAt: { gte: start, lt: end } },
         _sum: { returnedAmount: true },
@@ -78,7 +89,7 @@ export async function dashboardRoutes(app: FastifyInstance, db: Database) {
           status: "OPEN",
           dueDate: { gte: new Date(from), lte: new Date(to) },
         },
-        _sum: { amount: true },
+        _sum: { amount: true, settledAmount: true },
       }),
       db.financialEntry.aggregate({
         where: {
@@ -87,7 +98,7 @@ export async function dashboardRoutes(app: FastifyInstance, db: Database) {
           status: "OPEN",
           dueDate: { gte: new Date(from), lte: new Date(to) },
         },
-        _sum: { amount: true },
+        _sum: { amount: true, settledAmount: true },
       }),
       db.cashMovement.aggregate({
         where: {
@@ -125,7 +136,16 @@ export async function dashboardRoutes(app: FastifyInstance, db: Database) {
           quantity: Prisma.Decimal;
           total: Prisma.Decimal;
         }>
-      >`SELECT p.id,p.description,SUM(i.quantity) AS quantity,SUM(i.quantity*i."unitPrice"-i.discount) AS total FROM "SaleItem" i JOIN "Sale" s ON s.id=i."saleId" AND s."companyId"=i."companyId" JOIN "Product" p ON p.id=i."productId" AND p."companyId"=i."companyId" WHERE s."companyId"=${companyId}::uuid AND s.status='COMPLETED' AND s."createdAt">=${start} AND s."createdAt"<${end} GROUP BY p.id ORDER BY SUM(i.quantity) DESC LIMIT 5`,
+      >`WITH lines AS (
+ SELECT i.*, (i.quantity*i."unitPrice"-i.discount)*100 AS line_cents,s.discount*100 AS header_cents,s."createdAt" AS sold_at,
+ SUM((i.quantity*i."unitPrice"-i.discount)*100) OVER(PARTITION BY i."saleId") AS base_cents,
+ SUM((i.quantity*i."unitPrice"-i.discount)*100) OVER(PARTITION BY i."saleId" ORDER BY i.id ROWS UNBOUNDED PRECEDING) AS cumulative
+ FROM "SaleItem" i JOIN "Sale" s ON s.id=i."saleId" AND s."companyId"=i."companyId" WHERE s."companyId"=${companyId}::uuid AND s.status='COMPLETED'
+), events AS (
+ SELECT "productId", quantity, (line_cents-COALESCE(FLOOR(header_cents*cumulative/NULLIF(base_cents,0))-FLOOR(header_cents*(cumulative-line_cents)/NULLIF(base_cents,0)),0))/100 AS amount FROM lines WHERE sold_at>=${start} AND sold_at<${end}
+ UNION ALL
+ SELECT i."productId", -r.quantity, -r.amount FROM "ReturnItem" r JOIN "ReturnOperation" op ON op.id=r."returnId" AND op."companyId"=r."companyId" JOIN "SaleItem" i ON i.id=r."saleItemId" AND i."companyId"=r."companyId" WHERE op."companyId"=${companyId}::uuid AND op."createdAt">=${start} AND op."createdAt"<${end}
+) SELECT p.id,p.description,SUM(e.quantity) AS quantity,SUM(e.amount) AS total FROM events e JOIN "Product" p ON p.id=e."productId" GROUP BY p.id HAVING SUM(e.quantity)<>0 ORDER BY SUM(e.quantity) DESC,p.id LIMIT 5`,
       db.$queryRaw<
         Array<{ date: string; income: Prisma.Decimal; expense: Prisma.Decimal }>
       >`SELECT to_char(("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD') AS date, SUM(CASE WHEN amount>0 THEN amount ELSE 0 END) AS income,SUM(CASE WHEN amount<0 THEN -amount ELSE 0 END) AS expense FROM "CashMovement" WHERE (method IS NULL OR method IN ('CASH','PIX')) AND "companyId"=${companyId}::uuid AND "createdAt">=${start} AND "createdAt"<${end} GROUP BY 1 ORDER BY 1`,
@@ -151,16 +171,28 @@ export async function dashboardRoutes(app: FastifyInstance, db: Database) {
       revenue: new Prisma.Decimal(revenue._sum.total ?? 0)
         .minus(returnsPeriod._sum.returnedAmount ?? 0)
         .toString(),
-      salesCount: revenue._count,
+      grossRevenue: String(revenue._sum.total ?? 0),
+      returnsAmount: String(returnsPeriod._sum.returnedAmount ?? 0),
+      averageTicket: commercialCount
+        ? new Prisma.Decimal(revenue._sum.total ?? 0)
+            .minus(returnsPeriod._sum.returnedAmount ?? 0)
+            .div(commercialCount)
+            .toFixed(2)
+        : null,
+      salesCount: commercialCount,
       daySales: new Prisma.Decimal(daySales._sum.total ?? 0)
         .minus(returnsDay._sum.returnedAmount ?? 0)
         .toString(),
-      dayCount: daySales._count,
+      dayCount: dayCommercialCount,
       monthSales: new Prisma.Decimal(monthSales._sum.total ?? 0)
         .minus(returnsMonth._sum.returnedAmount ?? 0)
         .toString(),
-      receivables: String(receivables._sum.amount ?? 0),
-      payables: String(payables._sum.amount ?? 0),
+      receivables: new Prisma.Decimal(receivables._sum.amount ?? 0)
+        .minus(receivables._sum.settledAmount ?? 0)
+        .toString(),
+      payables: new Prisma.Decimal(payables._sum.amount ?? 0)
+        .minus(payables._sum.settledAmount ?? 0)
+        .toString(),
       balance: String(cash._sum.amount ?? 0),
       customerCount,
       productCount,

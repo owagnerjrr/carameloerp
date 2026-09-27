@@ -1,3 +1,4 @@
+import { restoreCredits } from "./credits.js";
 import { openSessionFor, cashSummary } from "./cash.js";
 import { validatePayments, recordPayments } from "./payments.js";
 import { createHash } from "node:crypto";
@@ -246,6 +247,7 @@ export async function cancelSale(
           reason: `Cancelamento da venda #${sale.number}: ${input.reason}`,
           type: "IN",
         });
+      await restoreCredits(tx, a, sale);
       const now = new Date();
       await tx.sale.update({
         where: { id: sale.id },

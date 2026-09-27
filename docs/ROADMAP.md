@@ -22,7 +22,9 @@ Entregue PDV real: leitura ISBN/EAN/SKU+Enter, carrinho, cliente opcional/cadast
 
 Entregues nesta etapa: caixa por terminal/sessão, conferência, suprimento/sangria, trocas com diferença, devolução parcial, emissão de vale-crédito e consulta operacional com CSV. Guia: [CAIXA-TROCAS.md](CAIXA-TROCAS.md).
 
-Pendentes: resgate de vale-crédito, orçamento e pedido operacionais, boleto/crediário/outras formas e impressão não fiscal. Integrações de pagamento dependem da fase 8.
+Consolidação entregue: resgate FIFO de vale no PDV, histórico e restauração, observações de caixa separadas, documentos normalizados e indicadores líquidos por data do evento.
+
+Pendentes: orçamento e pedido operacionais, boleto/crediário/outras formas e impressão não fiscal. Integrações de pagamento dependem da fase 8.
 
 ## FASE 5 — Financeiro
 

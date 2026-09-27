@@ -21,12 +21,14 @@ export function PaymentFields({
   renew,
   busy = false,
   review = false,
+  allowStoreCredit = false,
 }: {
   payments: PaymentDraft[];
   setPayments: Dispatch<SetStateAction<PaymentDraft[]>>;
   renew: () => void;
   busy?: boolean;
   review?: boolean;
+  allowStoreCredit?: boolean;
 }) {
   function changePayment(id: string, update: Partial<PaymentDraft>) {
     setPayments((p) => p.map((x) => (x.id === id ? { ...x, ...update } : x)));
@@ -63,7 +65,11 @@ export function PaymentFields({
                 }
               >
                 {Object.entries(paymentNames).map(([v, n]) => (
-                  <option value={v} key={v}>
+                  <option
+                    value={v}
+                    key={v}
+                    disabled={v === "STORE_CREDIT" && !allowStoreCredit}
+                  >
                     {n}
                   </option>
                 ))}
@@ -104,6 +110,11 @@ export function PaymentFields({
                   <strong>{change === "—" ? change : money(change)}</strong>
                 </p>
               </>
+            ) : p.method === "STORE_CREDIT" ? (
+              <p>
+                Utiliza os vales mais antigos do cliente nesta filial. Não é
+                recebimento externo.
+              </p>
             ) : (
               <label className="pdv-checkbox">
                 <input

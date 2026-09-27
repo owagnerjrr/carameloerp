@@ -6,6 +6,8 @@ import {
   cents,
   reais,
   csvCell,
+  documentSearch,
+  eventInPeriod,
 } from "@caramelo/contracts";
 import { HttpError, type AuthContext } from "../context.js";
 import { originalItemValues } from "./returns.js";
@@ -133,7 +135,12 @@ export function salesWhere(
           customer: {
             OR: [
               { name: { contains: f.customerQuery, mode: "insensitive" } },
-              { document: { contains: f.customerQuery } },
+              {
+                document: {
+                  contains: documentSearch(f.customerQuery),
+                  mode: "insensitive",
+                },
+              },
               { phone: { contains: f.customerQuery } },
               { email: { contains: f.customerQuery, mode: "insensitive" } },
             ],
@@ -153,7 +160,28 @@ export async function salesAnalysis(
   a: AuthContext,
   f: z.infer<typeof salesFilter>,
 ) {
-  const where = salesWhere(a, f);
+  const base = salesWhere(a, { ...f, from: undefined, to: undefined });
+  const dates = {
+    ...(f.from ? { gte: new Date(f.from + "T00:00:00-03:00") } : {}),
+    ...(f.to
+      ? { lt: new Date(Date.parse(f.to + "T00:00:00-03:00") + 86400000) }
+      : {}),
+  };
+  const where: Prisma.SaleWhereInput =
+    f.view === "payments"
+      ? salesWhere(a, f)
+      : {
+          ...base,
+          ...(f.from || f.to
+            ? {
+                OR: [
+                  { createdAt: dates },
+                  { returns: { some: { createdAt: dates } } },
+                ],
+              }
+            : {}),
+        };
+  const inPeriod = (d: Date) => eventInPeriod(d, f.from, f.to);
   if ((await db.sale.count({ where })) > 5000)
     throw new HttpError(
       422,
@@ -183,9 +211,13 @@ export async function salesAnalysis(
       seller: { include: { user: true } },
       cashSession: { include: { cashRegister: true } },
       payments: true,
-      returns: { include: { items: true } },
+      exchangeOrigin: { select: { id: true } },
+      returns: { where: { createdAt: dates }, include: { items: true } },
       items: {
-        include: { returns: true, product: { select: { publisher: true } } },
+        include: {
+          returns: { where: { returnOperation: { createdAt: dates } } },
+          product: { select: { publisher: true } },
+        },
       },
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -199,7 +231,7 @@ export async function salesAnalysis(
   });
   const net = (s: (typeof sales)[number]) =>
     s.status === "COMPLETED"
-      ? cents(String(s.total)) -
+      ? (inPeriod(s.createdAt) ? cents(String(s.total)) : 0n) -
         s.returns.reduce((n, r) => n + cents(String(r.returnedAmount)), 0n)
       : 0n;
   const qty = (s: (typeof sales)[number]) =>
@@ -207,7 +239,7 @@ export async function salesAnalysis(
       ? s.items.reduce(
           (n, i) =>
             n +
-            Number(i.quantity) -
+            (inPeriod(s.createdAt) ? Number(i.quantity) : 0) -
             i.returns.reduce((m, r) => m + r.quantity, 0),
           0,
         )
@@ -222,7 +254,10 @@ export async function salesAnalysis(
       col("customer", "Cliente"),
       col("quantity", "Itens líquidos"),
       col("total", "Total original", true),
-      col("net", "Total após devoluções", true),
+      col("gross", "Venda bruta no período", true),
+      col("returned", "Retornos no período", true),
+      col("net", "Venda líquida no período", true),
+      col("origin", "Origem"),
       col("method", "Pagamento"),
       col("status", "Status"),
     ];
@@ -236,6 +271,14 @@ export async function salesAnalysis(
       customer: s.customer?.name ?? "Não identificado",
       quantity: qty(s),
       total: s.total.toFixed(2),
+      gross:
+        inPeriod(s.createdAt) && s.status === "COMPLETED"
+          ? s.total.toFixed(2)
+          : "0.00",
+      returned: reais(
+        s.returns.reduce((n, r) => n + cents(String(r.returnedAmount)), 0n),
+      ),
+      origin: s.exchangeOrigin ? "Reposição de troca" : "Venda independente",
       net: reais(net(s)),
       method: s.payments.map((p) => p.method).join(" + "),
       status: s.status,
@@ -246,7 +289,8 @@ export async function salesAnalysis(
       col("isbn", "ISBN/EAN"),
       col("author", "Autor"),
       col("publisher", "Editora"),
-      col("quantity", "Quantidade original"),
+      col("quantity", "Unidades vendidas no período"),
+      col("netQuantity", "Unidades líquidas"),
       col("returned", "Devolvida"),
       col("price", "Preço", true),
       col("discount", "Desconto do item", true),
@@ -268,15 +312,25 @@ export async function salesAnalysis(
           isbn: i.isbn ?? "",
           author: i.author ?? "",
           publisher: i.publisher ?? i.product.publisher ?? "",
-          quantity: Number(i.quantity),
+          quantity:
+            inPeriod(s.createdAt) && s.status === "COMPLETED"
+              ? Number(i.quantity)
+              : 0,
+          netQuantity:
+            (inPeriod(s.createdAt) && s.status === "COMPLETED"
+              ? Number(i.quantity)
+              : 0) - returned,
           returned,
           price: i.unitPrice.toFixed(2),
           discount: i.discount.toFixed(2),
-          paid: reais(paid),
+          paid:
+            inPeriod(s.createdAt) && s.status === "COMPLETED"
+              ? reais(paid)
+              : "0.00",
           net:
             s.status === "COMPLETED"
               ? reais(
-                  paid -
+                  (inPeriod(s.createdAt) ? paid : 0n) -
                     i.returns.reduce((n, r) => n + cents(String(r.amount)), 0n),
                 )
               : "0.00",
@@ -298,6 +352,7 @@ export async function salesAnalysis(
       col("pix", "PIX", true),
       col("debit", "Débito", true),
       col("credit", "Crédito", true),
+      col("storeCredit", "Vale-crédito", true),
       col("supply", "Suprimento", true),
       col("withdrawal", "Sangria", true),
       col("difference", "Diferença", true),
@@ -389,6 +444,7 @@ export async function salesAnalysis(
         pix: sum((m) => m.method === "PIX"),
         debit: sum((m) => m.method === "DEBIT_CARD"),
         credit: sum((m) => m.method === "CREDIT_CARD"),
+        storeCredit: sum((m) => m.method === "STORE_CREDIT"),
         supply: sum((m) => m.kind === "SUPPLY"),
         withdrawal: sum((m) => m.kind === "WITHDRAWAL"),
         difference: s.difference?.toFixed(2) ?? "",
@@ -406,50 +462,87 @@ export async function salesAnalysis(
               ? "Hora"
               : "Período do dia",
       ),
-      col("count", "Vendas"),
+      col("count", "Vendas independentes"),
       col("quantity", "Itens líquidos"),
+      ...(f.view === "payments"
+        ? []
+        : [
+            col("gross", "Venda bruta no período", true),
+            col("returned", "Retornos no período", true),
+          ]),
       col(
         "total",
-        f.view === "payments" ? "Pagamentos não estornados" : "Venda líquida",
+        f.view === "payments"
+          ? "Pagamentos não estornados"
+          : "Venda líquida no período",
         true,
       ),
       col("average", "Ticket médio", true),
     ];
     const groups = new Map<
       string,
-      { ids: Set<string>; quantity: number; total: bigint }
+      { ids: Set<string>; quantity: number; gross: bigint; returned: bigint }
     >();
-    for (const s of sales.filter((s) => s.status === "COMPLETED")) {
-      const hour = commercialHour(s.createdAt);
+    for (const sale of sales.filter((s) => s.status === "COMPLETED")) {
+      const keyAt = (date: Date) => {
+        const hour = commercialHour(date);
+        return f.view === "operators"
+          ? sale.seller.user.name + " · " + sale.sellerId.slice(0, 8)
+          : f.view === "hours"
+            ? String(hour).padStart(2, "0") + "h"
+            : commercialPeriods.find((p) => hour >= p.start && hour < p.end)!
+                .name;
+      };
       const records =
         f.view === "payments"
-          ? s.payments
+          ? sale.payments
               .filter(
                 (p) => !p.reversedAt && (!f.method || p.method === f.method),
               )
-              .map((p) => ({ key: p.method, value: cents(String(p.amount)) }))
+              .map((p) => ({
+                key: p.method,
+                gross: cents(String(p.amount)),
+                returned: 0n,
+                quantity: qty(sale),
+                count: !sale.exchangeOrigin,
+              }))
           : [
-              {
-                key:
-                  f.view === "operators"
-                    ? s.seller.user.name + " · " + s.sellerId.slice(0, 8)
-                    : f.view === "hours"
-                      ? String(hour).padStart(2, "0") + "h"
-                      : commercialPeriods.find(
-                          (p) => hour >= p.start && hour < p.end,
-                        )!.name,
-                value: net(s),
-              },
+              ...(inPeriod(sale.createdAt)
+                ? [
+                    {
+                      key: keyAt(sale.createdAt),
+                      gross: cents(String(sale.total)),
+                      returned: 0n,
+                      quantity: sale.items.reduce(
+                        (n, i) => n + Number(i.quantity),
+                        0,
+                      ),
+                      count: !sale.exchangeOrigin,
+                    },
+                  ]
+                : []),
+              ...sale.returns.map((r) => ({
+                key: keyAt(r.createdAt),
+                gross: 0n,
+                returned: cents(String(r.returnedAmount)),
+                quantity: -r.items.reduce((n, i) => n + i.quantity, 0),
+                count: false,
+              })),
             ];
+      const paymentGroups = new Set<string>();
       for (const rec of records) {
         const g = groups.get(rec.key) ?? {
           ids: new Set<string>(),
           quantity: 0,
-          total: 0n,
+          gross: 0n,
+          returned: 0n,
         };
-        if (!g.ids.has(s.id)) g.quantity += qty(s);
-        g.ids.add(s.id);
-        g.total += rec.value;
+        if (rec.count) g.ids.add(sale.id);
+        if (f.view !== "payments" || !paymentGroups.has(rec.key))
+          g.quantity += rec.quantity;
+        paymentGroups.add(rec.key);
+        g.gross += rec.gross;
+        g.returned += rec.returned;
         groups.set(rec.key, g);
       }
     }
@@ -459,12 +552,12 @@ export async function salesAnalysis(
         group,
         count: g.ids.size,
         quantity: g.quantity,
-        total: reais(g.total),
-        average: reais(
-          g.ids.size
-            ? (g.total + BigInt(g.ids.size) / 2n) / BigInt(g.ids.size)
-            : 0n,
-        ),
+        gross: reais(g.gross),
+        returned: reais(g.returned),
+        total: reais(g.gross - g.returned),
+        average: g.ids.size
+          ? reais((g.gross - g.returned) / BigInt(g.ids.size))
+          : "",
       }));
   }
   if (f.csv)

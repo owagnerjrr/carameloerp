@@ -110,8 +110,11 @@ export function SalesMovements({
         {selection ? "Localizar venda original" : "Movimentações de vendas"}
       </h2>
       <p>
-        Pesquise sem informar o dia da compra. Valores líquidos descontam os
-        itens devolvidos; pagamentos mostram registros externos não estornados.
+        Pesquise sem informar o dia da compra. Venda líquida = mercadorias
+        vendidas no período (após descontos, inclui reposições) menos retornos
+        ocorridos no período. Reposições não contam como novas vendas
+        independentes. Pagamentos incluem vales; caixa usa a data de abertura e
+        mostra a sessão inteira.
       </p>
       <div className="stock-tabs">
         {[
@@ -285,7 +288,9 @@ export function SalesMovements({
                           ? "Concluída"
                           : row[c.key] === "CANCELLED"
                             ? "Cancelada"
-                            : row[c.key]}
+                            : c.key === "average" && row[c.key] === ""
+                              ? "—"
+                              : row[c.key]}
                   </td>
                 ))}
                 {["sales", "items"].includes(view) && (

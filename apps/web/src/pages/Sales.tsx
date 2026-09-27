@@ -1,3 +1,4 @@
+import { CreditBalance } from "./CreditBalance";
 import { SalesMovements } from "./SalesMovements";
 import { ReturnForm, ReturnDetail } from "./Returns";
 import { PaymentFields, newPayment, type PaymentDraft } from "./PaymentFields";
@@ -703,11 +704,19 @@ function PointOfSale({
         <strong className="pdv-grand-total" aria-label="Total da venda">
           {money(totals.total)}
         </strong>
-        <h3>Pagamentos manuais</h3>
+        <CreditBalance
+          customerId={customer?.id}
+          branchId={
+            options.warehouses.find((w) => w.id === warehouse)?.branch.id
+          }
+          version={version}
+        />
+        <h3>Pagamentos</h3>
         <p className="helper-text">
           Confirme PIX e cartão somente após receber fora do Caramelo.
         </p>
         <PaymentFields
+          allowStoreCredit={!!customer && !!warehouse}
           payments={payments}
           setPayments={setPayments}
           renew={renew}

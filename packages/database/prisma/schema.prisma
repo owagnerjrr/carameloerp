@@ -7,6 +7,7 @@ datasource db {
 }
 
 model Company {
+  creditMovements CustomerCreditMovement[]
   cashSessions CashSession[]
   returns ReturnOperation[]
   credits CustomerCredit[]
@@ -78,6 +79,7 @@ model RolePermission {
   @@id([roleId,permissionCode])
 }
 model Membership {
+  creditMovements CustomerCreditMovement[]
   openedCashSessions CashSession[] @relation("CashOpener")
   closedCashSessions CashSession[] @relation("CashCloser")
   cashMovements CashMovement[]
@@ -114,6 +116,7 @@ model Session {
   @@index([membershipId])
 }
 model Customer {
+  creditMovements CustomerCreditMovement[]
   returns ReturnOperation[]
   credits CustomerCredit[]
 
@@ -304,6 +307,7 @@ enum SaleStatus {
   RETURNED
 }
 model Sale {
+  creditMovements CustomerCreditMovement[]
   cashSessionId String? @db.Uuid
   exchangeCredit Decimal @default(0) @db.Decimal(14,2)
   cashSession CashSession? @relation(fields:[companyId,cashSessionId],references:[companyId,id])
@@ -404,6 +408,7 @@ enum EntryStatus {
   CANCELLED
 }
 model FinancialEntry {
+ settledAmount Decimal @default(0) @db.Decimal(14,2)
   returnId String? @db.Uuid
   returnOperation ReturnOperation? @relation(fields:[companyId,returnId],references:[companyId,id])
 
@@ -556,6 +561,8 @@ model StockDocumentItem {
 }
 
 model CashSession {
+ openingNotes String?
+ closingNotes String?
  id String @id @default(uuid()) @db.Uuid
  companyId String @db.Uuid
  branchId String @db.Uuid
@@ -589,6 +596,7 @@ model CashSession {
  @@index([companyId,branchId,status])
 }
 model ReturnOperation {
+  creditMovements CustomerCreditMovement[]
  id String @id @default(uuid()) @db.Uuid
  companyId String @db.Uuid
  branchId String @db.Uuid
@@ -639,6 +647,7 @@ model ReturnItem {
  @@index([companyId,saleItemId])
 }
 model CustomerCredit {
+  creditMovements CustomerCreditMovement[]
  id String @id @default(uuid()) @db.Uuid
  companyId String @db.Uuid
  customerId String @db.Uuid
@@ -653,4 +662,27 @@ model CustomerCredit {
  @@unique([companyId,id])
  @@unique([companyId,returnId])
  @@index([companyId,customerId,status])
+}
+
+model CustomerCreditMovement {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ creditId String @db.Uuid
+ customerId String @db.Uuid
+ actorId String @db.Uuid
+ saleId String? @db.Uuid
+ returnId String @db.Uuid
+ kind String
+ amount Decimal @db.Decimal(14,2)
+ beforeBalance Decimal @db.Decimal(14,2)
+ afterBalance Decimal @db.Decimal(14,2)
+ createdAt DateTime @default(now())
+ company Company @relation(fields:[companyId],references:[id])
+ credit CustomerCredit @relation(fields:[companyId,creditId],references:[companyId,id])
+ customer Customer @relation(fields:[companyId,customerId],references:[companyId,id])
+ actor Membership @relation(fields:[companyId,actorId],references:[companyId,id])
+ sale Sale? @relation(fields:[companyId,saleId],references:[companyId,id])
+ returnOperation ReturnOperation @relation(fields:[companyId,returnId],references:[companyId,id])
+ @@unique([companyId,creditId,saleId,kind])
+ @@index([companyId,customerId,createdAt])
 }

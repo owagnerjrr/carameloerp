@@ -1,4 +1,4 @@
-import { identifier } from "@caramelo/contracts";
+import { identifier, documentSearch } from "@caramelo/contracts";
 import { saveIdentifiers } from "../services/books.js";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
@@ -14,7 +14,12 @@ export async function catalogRoutes(app: FastifyInstance, db: Database) {
       companyId,
       OR: [
         { name: { contains: q, mode: "insensitive" as const } },
-        { document: { contains: q } },
+        {
+          document: {
+            contains: documentSearch(q),
+            mode: "insensitive" as const,
+          },
+        },
         { phone: { contains: q } },
         { email: { contains: q, mode: "insensitive" as const } },
       ],

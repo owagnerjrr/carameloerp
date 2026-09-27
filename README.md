@@ -18,7 +18,7 @@ Entradas, ajustes, vendas e cancelamentos são operacionais e persistem no Postg
 
 ## Caixa, trocas e consulta operacional
 
-Entregues abertura, suprimento/sangria, fechamento com conferência, trocas parciais com pagamento da diferença, devoluções com vale-crédito e consultas por vendas/itens/caixas/operadores/pagamentos/horários com CSV. O vale é emitido e persistido; resgate futuro ainda está pendente. Guia, endpoints, regras e limites: [docs/CAIXA-TROCAS.md](docs/CAIXA-TROCAS.md). Migration: `202609270001_cash_returns`.
+Entregues abertura, suprimento/sangria, fechamento com conferência, trocas parciais com pagamento da diferença, devoluções com vale-crédito e consultas por vendas/itens/caixas/operadores/pagamentos/horários com CSV. O vale pode ser utilizado total ou parcialmente no PDV, inclusive com pagamentos mistos, pelo mesmo cliente na filial de origem. Consumo FIFO e restauração no cancelamento são transacionais. Guia de consolidação: [docs/CONSOLIDACAO.md](docs/CONSOLIDACAO.md). Guia, endpoints, regras e limites: [docs/CAIXA-TROCAS.md](docs/CAIXA-TROCAS.md). Migration: `202609270001_cash_returns`.
 
 ## PDV e vendas
 

@@ -11,7 +11,7 @@ Esta etapa evolui o PDV e o estoque existentes. Decisões: [CAIXA-TROCAS-ARQUITE
 5. **Fechar caixa** mostra o resumo e solicita dinheiro contado. A diferença é contado menos esperado; se diferente de zero, exige observação. **Atualizar resumo** permite conferir novamente quando outra operação alterou o saldo.
 6. A conferência fica gravada com usuário, horário e diferença. Uma sessão fechada não recebe vendas, trocas ou movimentos. Cancelamento posterior usa uma sessão aberta atual da mesma filial, preservando o fechamento anterior.
 
-O total vendido líquido da sessão é recebimentos menos cancelamentos e vales emitidos naquela sessão. A diferença de troca positiva entra como recebimento; a parcela reaplicada na mercadoria não é um novo recebimento. Vales não retiram dinheiro da gaveta. O histórico de movimentos registra os recebimentos externos; vales possuem histórico próprio ligado à troca/devolução.
+O total vendido líquido da sessão é recebimentos menos cancelamentos e vales emitidos naquela sessão. A diferença de troca positiva entra como recebimento; a parcela reaplicada na mercadoria não é um novo recebimento. Vales não retiram dinheiro da gaveta. O histórico registra recebimentos externos e movimentos lógicos STORE_CREDIT, sem entrada física de dinheiro. Vales também possuem histórico próprio de emissão, uso e restauração.
 
 ## Trocar ou devolver
 
@@ -26,7 +26,7 @@ Para trocar, leia ISBN/EAN/SKU e Enter ou pesquise os novos livros. Ler novament
 - Diferença negativa: identifique um cliente ativo para emitir vale-crédito com origem, valor, saldo e status.
 - Devolução sem novos livros: emite vale pelo valor devolvido.
 
-A política desta entrega é **vale-crédito**, sem reembolso bancário/manual. O vale fica consultável no histórico da operação e pela API de créditos por cliente. Seu **resgate em venda futura ainda não está implementado**; o saldo não é consumido ficticiamente.
+A política desta entrega é **vale-crédito**, sem reembolso bancário/manual. O vale fica consultável no histórico da operação e pela API de créditos por cliente. No PDV, selecione cliente e depósito, consulte o saldo e escolha **Vale-crédito** como pagamento. É possível usar parte do saldo e combinar com dinheiro, PIX ou cartões. O servidor consome os vales disponíveis mais antigos do mesmo cliente e filial; cancelamento elegível restaura exatamente os consumos. Veja [CONSOLIDACAO.md](CONSOLIDACAO.md).
 
 O detalhe preserva venda original, reposição, itens, pagamentos, vale, operador, filial, caixa e movimentos com saldos anteriores/posteriores. A operação é atômica e idempotente. Não há exclusão de trocas/devoluções pela API. Vendas com retornos ou reposições de troca não permitem cancelamento integral avulso; seus itens disponíveis podem ser devolvidos em outra operação rastreável.
 
@@ -38,9 +38,9 @@ A troca usa o depósito original. Vendas legadas sem vínculo operacional de est
 
 Visões: vendas, itens, caixas, operador, pagamento, hora e período do dia. Horários usam America/Sao_Paulo; madrugada 0–6, manhã 6–12, tarde 12–18 e noite 18–24, centralizados nos contratos.
 
-Valores líquidos de vendas/itens descontam retornos acumulados. Na visão de itens, os filtros bibliográficos limitam também as linhas exibidas, preservando o rateio do desconto da venda inteira. A visão de caixas mostra o resumo completo das sessões selecionadas; filtros de livro/cliente selecionam sessões que contêm vendas correspondentes, não recortam seus movimentos.
+Valores comerciais usam a data de cada evento: vendas realizadas no período menos retornos realizados no período, mesmo que a venda original seja anterior. Na visão de itens, os filtros bibliográficos limitam também as linhas exibidas, preservando o rateio do desconto da venda inteira. A visão de caixas mostra o resumo completo das sessões selecionadas; filtros de livro/cliente selecionam sessões que contêm vendas correspondentes, não recortam seus movimentos.
 
-Por pagamento, valores representam pagamentos externos não estornados. Uma venda mista participa de cada método utilizado; quantidades de vendas/itens entre métodos não devem ser somadas como total único. O vale não é estorno do pagamento original. Ticket médio é o valor do grupo dividido por suas vendas distintas. Canceladas não participam dos agrupamentos de vendas concluídas.
+Por pagamento, valores representam pagamentos não estornados, incluindo STORE_CREDIT, pela data da venda. Uma venda mista participa de cada método utilizado; quantidades de vendas/itens entre métodos não devem ser somadas como total único. O vale não é estorno do pagamento original. Reposições participam dos valores e itens, mas não da contagem de vendas independentes. Ticket médio divide o valor líquido pela contagem independente; sem venda independente fica indisponível. Canceladas não participam dos agrupamentos de vendas concluídas.
 
 Exportação CSV usa os mesmos filtros e visão, UTF-8 com BOM, separador `;`, aspas escapadas e proteção contra fórmulas. Paginação de 25 linhas; consultas limitadas a 5.000 vendas/20.000 itens e 5.000 sessões, solicitando filtros adicionais. Não há PDF nesta entrega.
 

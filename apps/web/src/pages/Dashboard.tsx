@@ -23,6 +23,9 @@ import { api, money, number, type Auth } from "../api";
 import { Empty, Loading, ErrorMessage } from "../components";
 interface DashboardData {
   revenue: string;
+  grossRevenue: string;
+  returnsAmount: string;
+  averageTicket: string | null;
   salesCount: number;
   daySales: string;
   dayCount: number;
@@ -181,9 +184,9 @@ export function Dashboard({
           <div className="stats-grid">
             {[
               {
-                label: "Faturamento",
+                label: "Venda líquida",
                 value: data.revenue,
-                caption: `${data.salesCount} vendas concluídas no período`,
+                caption: `${data.salesCount} vendas independentes no período`,
                 icon: TrendingUp,
                 color: "caramel",
               },
@@ -221,6 +224,23 @@ export function Dashboard({
               </section>
             ))}
           </div>
+          <section className="card stock-entry">
+            <h2>Resultado comercial do período</h2>
+            <p>
+              Venda bruta de mercadorias (após descontos, inclui reposições):{" "}
+              <strong>{money(data.grossRevenue)}</strong> · Retornos ocorridos:{" "}
+              <strong>{money(data.returnsAmount)}</strong> · Venda líquida:{" "}
+              <strong>{money(data.revenue)}</strong>
+            </p>
+            <p>
+              Ticket médio:{" "}
+              {data.averageTicket === null
+                ? "Sem vendas independentes no período"
+                : money(data.averageTicket)}
+              . Reposições de troca não contam como novas vendas. Cada venda e
+              retorno entra pela sua própria data.
+            </p>
+          </section>
           <div className="dashboard-main">
             <section className="card chart-card">
               <div className="card-heading">

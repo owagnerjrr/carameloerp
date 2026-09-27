@@ -226,15 +226,40 @@ export async function operationRoutes(app: FastifyInstance, db: Database) {
   });
   app.get("/api/credits", async (req) => {
     const a = requirePermission(req, "sales:read"),
-      q = z.object({ customerId: z.uuid() }).parse(req.query);
+      q = z
+        .object({
+          customerId: z.uuid(),
+          branchId: z.uuid().optional(),
+          status: z.enum(["AVAILABLE", "USED"]).optional(),
+        })
+        .strict()
+        .parse(req.query);
+    if (a.branchId && q.branchId && a.branchId !== q.branchId)
+      throw new HttpError(404, "Filial indisponível.");
     return db.customerCredit.findMany({
       where: {
         companyId: a.companyId,
         customerId: q.customerId,
-        ...(a.branchId ? { returnOperation: { branchId: a.branchId } } : {}),
+        ...(a.branchId || q.branchId
+          ? { returnOperation: { branchId: a.branchId ?? q.branchId } }
+          : {}),
+        ...(q.status ? { status: q.status } : {}),
       },
       include: {
-        returnOperation: { select: { number: true, originalSaleId: true } },
+        returnOperation: {
+          select: {
+            number: true,
+            originalSaleId: true,
+            branch: { select: { name: true } },
+          },
+        },
+        creditMovements: {
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          include: {
+            sale: { select: { number: true } },
+            actor: { select: { user: { select: { name: true } } } },
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     });

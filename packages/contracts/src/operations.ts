@@ -70,3 +70,16 @@ export function csvCell(value: unknown) {
   if (/^[\s]*[=+@\-\t\r]/.test(s)) s = "'" + s;
   return '"' + s.replaceAll('"', '""') + '"';
 }
+
+export function documentSearch(value: string) {
+  const normalized = value.replace(/[./\s-]/g, "").toUpperCase();
+  return /^(?:[0-9]{11}|[A-Z0-9]{12}[0-9]{2})$/.test(normalized)
+    ? normalized
+    : value;
+}
+export function eventInPeriod(date: Date, from?: string, to?: string) {
+  return (
+    (!from || date >= new Date(from + "T00:00:00-03:00")) &&
+    (!to || date < new Date(Date.parse(to + "T00:00:00-03:00") + 86400000))
+  );
+}

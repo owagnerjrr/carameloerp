@@ -1,3 +1,4 @@
+import { recordCreditIssue } from "./credits.js";
 import { randomUUID } from "node:crypto";
 import { Prisma, type Database } from "@caramelo/database";
 import { cents, reais, type returnSchema } from "@caramelo/contracts";
@@ -246,7 +247,7 @@ export async function completeReturn(
         });
       }
       if (cents(q.credit) > 0n) {
-        await tx.customerCredit.create({
+        const credit = await tx.customerCredit.create({
           data: {
             companyId: a.companyId,
             customerId: q.customerId!,
@@ -255,6 +256,7 @@ export async function completeReturn(
             balance: q.credit,
           },
         });
+        await recordCreditIssue(tx, a, credit, op.branchId);
         await tx.financialEntry.create({
           data: {
             companyId: a.companyId,

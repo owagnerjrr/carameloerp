@@ -33,7 +33,13 @@ export const quoteSchema = z
   );
 export const salePaymentSchema = z
   .object({
-    method: z.enum(["CASH", "PIX", "DEBIT_CARD", "CREDIT_CARD"]),
+    method: z.enum([
+      "CASH",
+      "PIX",
+      "DEBIT_CARD",
+      "CREDIT_CARD",
+      "STORE_CREDIT",
+    ]),
     amount: moneyInput,
     receivedAmount: moneyInput.optional(),
     installments: z.number().int().min(1).max(12).default(1),
@@ -87,6 +93,7 @@ export function splitCents(total: bigint, count: number) {
   return Array.from({ length: count }, (_, i) => base + (i < extra ? 1n : 0n));
 }
 export const paymentNames = {
+  STORE_CREDIT: "Vale-crédito",
   CASH: "Dinheiro",
   PIX: "PIX manual",
   DEBIT_CARD: "Débito manual",

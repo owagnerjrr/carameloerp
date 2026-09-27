@@ -90,6 +90,7 @@ export async function cashSummary(tx: Transaction, a: AuthContext, id: string) {
     DEBIT_CARD: 0n,
     CREDIT_CARD: 0n,
     OTHER: 0n,
+    STORE_CREDIT: 0n,
   };
   let supplies = 0n,
     withdrawals = 0n,
@@ -197,7 +198,7 @@ export async function openCash(
           cashRegisterId: terminal.id,
           openedById: a.membershipId,
           openingAmount: input.openingAmount,
-          notes: input.notes,
+          openingNotes: input.notes,
           requestKey: input.requestKey,
           requestHash: hashInput(input),
         },
@@ -216,6 +217,7 @@ export async function openCash(
       });
       await auditCash(tx, a, s.id, "CASH_OPENED", s.branchId, {
         opening: input.openingAmount,
+        openingNotes: input.notes ?? null,
       });
       return s;
     },
@@ -317,7 +319,7 @@ export async function closeCash(
           countedAmount: input.countedAmount,
           difference: reais(difference),
           closingSummary: summary,
-          notes: input.notes,
+          closingNotes: input.notes,
           closeRequestKey: input.requestKey,
           closeRequestHash: hashInput(input),
         },
