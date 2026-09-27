@@ -134,6 +134,10 @@ export function UsersPage({ auth }: { auth: Auth }) {
                       "sales:create": "Vender no PDV",
                       "sales:discount": "Conceder descontos",
                       "sales:cancel": "Cancelar vendas",
+                      "cash:read": "Consultar caixa",
+                      "cash:operate": "Operar caixa",
+                      "cash:manage": "Gerenciar caixas",
+                      "returns:create": "Trocar/devolver",
                     })[p.permissionCode] ?? p.permissionCode,
                 )
                 .join(" · ")}

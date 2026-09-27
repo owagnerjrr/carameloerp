@@ -20,15 +20,17 @@ Pendentes: saída avulsa (baixa por venda já entregue), transferências com tr�
 
 Entregue PDV real: leitura ISBN/EAN/SKU+Enter, carrinho, cliente opcional/cadastro, descontos, dinheiro/troco, PIX manual, débito/crédito manual, parcelas, misto, confirmação atômica/idempotente com estoque e financeiro, histórico/detalhes e cancelamento com recomposição. Concorrência e rollback testados em PostgreSQL. Guia: [PDV.md](PDV.md).
 
-Pendentes: orçamento e pedido operacionais, devolução parcial, boleto/crediário/outras formas, gestão de turnos e impressão não fiscal. Integrações de pagamento dependem da fase 8.
+Entregues nesta etapa: caixa por terminal/sessão, conferência, suprimento/sangria, trocas com diferença, devolução parcial, emissão de vale-crédito e consulta operacional com CSV. Guia: [CAIXA-TROCAS.md](CAIXA-TROCAS.md).
+
+Pendentes: resgate de vale-crédito, orçamento e pedido operacionais, boleto/crediário/outras formas e impressão não fiscal. Integrações de pagamento dependem da fase 8.
 
 ## FASE 5 — Financeiro
 
-Contas a pagar/receber, baixa, parcelamento, recorrência, juros, multa, desconto, categorias, centros de custo, contas bancárias e caixa. Fluxo previsto/realizado, vencidos/futuros, conciliação e fechamentos.
+Caixa operacional e conferência entregues. Evoluir contas a pagar/receber, baixa, parcelamento, recorrência, juros, multa, desconto, categorias, centros de custo, contas bancárias e caixa. Fluxo previsto/realizado, vencidos/futuros, conciliação e fechamentos.
 
 ## FASE 6 — Relatórios
 
-Central com filtros por período para vendas, itens vendidos, estoque/mínimo/movimentos, clientes, fornecedores, contas, caixa, receitas/despesas e lucro/margem. Exportação CSV/Excel/PDF, proteção contra fórmulas em CSV, filas para relatórios grandes e autorização por empresa.
+Consulta operacional de vendas/itens/caixas/operadores/pagamentos/horários e CSV entregue. Evoluir central com filtros por período para vendas, itens vendidos, estoque/mínimo/movimentos, clientes, fornecedores, contas, caixa, receitas/despesas e lucro/margem. Exportação CSV/Excel/PDF, proteção contra fórmulas em CSV, filas para relatórios grandes e autorização por empresa.
 
 ## FASE 7 — Fiscal
 

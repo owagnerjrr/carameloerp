@@ -1,10 +1,11 @@
+import { openSessionFor, cashSummary } from "./cash.js";
+import { validatePayments, recordPayments } from "./payments.js";
 import { createHash } from "node:crypto";
 import { Prisma, type Database } from "@caramelo/database";
 import {
   cents,
   reais,
   discountCents,
-  splitCents,
   MAX_CENTS,
   type SaleCart,
   type Checkout,
@@ -14,7 +15,10 @@ import type { z } from "zod";
 import { HttpError, type AuthContext, type Transaction } from "../context.js";
 import { lock, moveStock, warehouseAccess } from "./stock.js";
 const saleInclude = {
-  items: true,
+  items: { include: { returns: true } },
+  cashSession: { include: { cashRegister: true } },
+  returns: { include: { items: true, credit: true } },
+  exchangeOrigin: true,
   payments: { include: { financialEntries: true } },
   warehouse: { include: { branch: true } },
   branch: true,
@@ -29,7 +33,7 @@ function requireMoneyRange(value: bigint) {
   if (value < 0n || value > MAX_CENTS)
     throw new HttpError(400, "Total fora do limite monetário permitido.");
 }
-async function operator(
+export async function operator(
   tx: Transaction,
   auth: AuthContext,
   permission: string,
@@ -106,6 +110,7 @@ export async function priceCart(
       description: p.description,
       isbn: p.isbn13 ?? p.barcode ?? p.isbn10,
       author: p.author,
+      publisher: p.publisher,
       quantity: line.quantity,
       unitPrice: reais(price),
       unitCost: String(p.cost),
@@ -149,19 +154,6 @@ export async function priceCart(
     total: reais(total),
   };
 }
-function commercialDate(now: Date) {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Sao_Paulo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
-}
-function dueMonth(day: string, month: number) {
-  const [y, m, d] = day.split("-").map(Number);
-  const last = new Date(Date.UTC(y!, m! - 1 + month + 1, 0)).getUTCDate();
-  return new Date(Date.UTC(y!, m! - 1 + month, Math.min(d!, last)));
-}
 export async function completeSale(
   db: Database,
   auth: AuthContext,
@@ -192,174 +184,7 @@ export async function completeSale(
           );
         return old;
       }
-      await lock(tx, a.companyId + ":warehouse:" + input.cart.warehouseId);
-      const priced = await priceCart(tx, a, input.cart);
-      const total = cents(priced.total);
-      if (input.payments.filter((p) => p.method === "CASH").length > 1)
-        throw new HttpError(400, "Agrupe dinheiro em um único pagamento.");
-      const payments = input.payments.map((p) => {
-        const amount = cents(p.amount);
-        if (amount <= 0n)
-          throw new HttpError(400, "Pagamento deve ter valor positivo.");
-        if (p.method !== "CASH" && !p.confirmed)
-          throw new HttpError(
-            400,
-            "Confirme o recebimento externo do PIX/cartão.",
-          );
-        if (p.method !== "CREDIT_CARD" && p.installments !== 1)
-          throw new HttpError(400, "Parcelas somente para crédito.");
-        if (p.method !== "CASH" && p.receivedAmount !== undefined)
-          throw new HttpError(400, "Valor recebido/troco somente em dinheiro.");
-        const received =
-          p.method === "CASH" ? cents(p.receivedAmount ?? "0") : null;
-        if (received !== null && received < amount)
-          throw new HttpError(400, "Valor recebido em dinheiro insuficiente.");
-        if (amount < BigInt(p.installments))
-          throw new HttpError(
-            400,
-            "Valor insuficiente para o número de parcelas.",
-          );
-        return {
-          ...p,
-          amount: reais(amount),
-          receivedAmount: received === null ? null : reais(received),
-          change: reais(received === null ? 0n : received - amount),
-        };
-      });
-      if (payments.reduce((n, p) => n + cents(p.amount), 0n) !== total)
-        throw new HttpError(
-          400,
-          "A soma dos pagamentos deve ser igual ao total da venda.",
-        );
-      await lock(tx, a.companyId + ":sale-number");
-      const number =
-        (
-          await tx.sale.aggregate({
-            where: { companyId: a.companyId },
-            _max: { number: true },
-          })
-        )._max.number ?? 0;
-      const sale = await tx.sale.create({
-        data: {
-          companyId: a.companyId,
-          branchId: priced.warehouse.branchId,
-          warehouseId: priced.warehouse.id,
-          sellerId: a.membershipId,
-          customerId: input.cart.customerId,
-          number: number + 1,
-          status: "COMPLETED",
-          subtotal: priced.subtotal,
-          total: priced.total,
-          discount: priced.discount,
-          requestKey: input.requestKey,
-          requestHash,
-        },
-      });
-      for (const item of priced.items) {
-        const { subtotal: _, ...data } = item;
-        void _;
-        await tx.saleItem.create({
-          data: { ...data, companyId: a.companyId, saleId: sale.id },
-        });
-        await moveStock(tx, a, {
-          warehouseId: priced.warehouse.id,
-          productId: item.productId,
-          delta: new Prisma.Decimal(item.quantity).negated(),
-          saleId: sale.id,
-          reason: `Saída por venda #${sale.number}`,
-          type: "OUT",
-        });
-      }
-      const day = commercialDate(sale.createdAt);
-      for (const p of payments) {
-        const immediate = p.method === "CASH" || p.method === "PIX";
-        const payment = await tx.payment.create({
-          data: {
-            companyId: a.companyId,
-            saleId: sale.id,
-            method: p.method,
-            amount: p.amount,
-            receivedAmount: p.receivedAmount,
-            change: p.change,
-            installments: p.installments,
-            cardBrand: p.cardBrand,
-            reference: p.reference,
-            paidAt: sale.createdAt,
-          },
-        });
-        const parts = splitCents(cents(p.amount), p.installments);
-        for (const [i, value] of parts.entries()) {
-          const due =
-            p.method === "CREDIT_CARD"
-              ? dueMonth(day, i + 1)
-              : new Date(day + "T00:00:00Z");
-          if (p.method === "DEBIT_CARD") due.setUTCDate(due.getUTCDate() + 1);
-          await tx.financialEntry.create({
-            data: {
-              companyId: a.companyId,
-              branchId: priced.warehouse.branchId,
-              saleId: sale.id,
-              paymentId: payment.id,
-              customerId: input.cart.customerId,
-              type: "RECEIVABLE",
-              status: immediate ? "SETTLED" : "OPEN",
-              description: `Venda #${sale.number} — ${p.method} — ${i + 1}/${parts.length}`,
-              amount: reais(value),
-              dueDate: due,
-              settledAt: immediate ? sale.createdAt : null,
-              installment: i + 1,
-            },
-          });
-        }
-        if (immediate) {
-          const cash = await tx.cashRegister.upsert({
-            where: {
-              companyId_branchId: {
-                companyId: a.companyId,
-                branchId: priced.warehouse.branchId,
-              },
-            },
-            create: {
-              companyId: a.companyId,
-              branchId: priced.warehouse.branchId,
-              name: "Caixa de vendas da filial",
-            },
-            update: {},
-          });
-          await tx.cashMovement.create({
-            data: {
-              companyId: a.companyId,
-              cashRegisterId: cash.id,
-              saleId: sale.id,
-              paymentId: payment.id,
-              kind: "RECEIPT",
-              amount: p.amount,
-              description: `Venda #${sale.number} — ${p.method}`,
-            },
-          });
-        }
-      }
-      await tx.auditLog.create({
-        data: {
-          companyId: a.companyId,
-          actorId: a.membershipId,
-          action: "SALE_COMPLETED",
-          module: "sales",
-          recordId: sale.id,
-          metadata: {
-            branchId: sale.branchId,
-            warehouseId: sale.warehouseId,
-            total: sale.total.toString(),
-            itemDiscount: priced.itemDiscount,
-            discount: priced.discount,
-            manualPayments: true,
-          },
-        },
-      });
-      return tx.sale.findUniqueOrThrow({
-        where: { id: sale.id },
-        include: saleInclude,
-      });
+      return writeSale(tx, a, input, requestHash);
     },
     { timeout: 20000, maxWait: 10000 },
   );
@@ -395,6 +220,20 @@ export async function cancelSale(
         throw new HttpError(
           400,
           "Somente vendas operacionais concluídas nesta versão podem ser canceladas.",
+        );
+      if (sale.returns.length || sale.exchangeOrigin)
+        throw new HttpError(
+          409,
+          "Venda vinculada a troca/devolução não admite cancelamento integral. Use devolução de itens.",
+        );
+      const session = await openSessionFor(tx, a, sale.branchId);
+      const refund = sale.payments
+        .filter((p) => p.method === "CASH")
+        .reduce((n, p) => n + cents(String(p.amount)), 0n);
+      if (refund > cents((await cashSummary(tx, a, session.id)).expected))
+        throw new HttpError(
+          409,
+          "Dinheiro insuficiente na sessão atual para cancelar esta venda.",
         );
       await warehouseAccess(tx, a, sale.warehouseId);
       await lock(tx, a.companyId + ":warehouse:" + sale.warehouseId);
@@ -432,7 +271,12 @@ export async function cancelSale(
         await tx.cashMovement.create({
           data: {
             companyId: a.companyId,
-            cashRegisterId: movement.cashRegisterId,
+            cashRegisterId: session.cashRegisterId,
+            cashSessionId: session.id,
+            actorId: a.membershipId,
+            method:
+              movement.method ??
+              sale.payments.find((p) => p.id === movement.paymentId)?.method,
             saleId: sale.id,
             paymentId: movement.paymentId,
             kind: "REVERSAL",
@@ -462,4 +306,94 @@ export async function cancelSale(
     },
     { timeout: 20000, maxWait: 10000 },
   );
+}
+
+export async function writeSale(
+  tx: Transaction,
+  a: AuthContext,
+  input: Checkout,
+  requestHash: string,
+  options: { returnId?: string; exchangeCredit?: bigint } = {},
+) {
+  const warehouse = await warehouseAccess(tx, a, input.cart.warehouseId);
+  const session = await openSessionFor(
+    tx,
+    a,
+    warehouse.branchId,
+    input.cashSessionId,
+  );
+  const credit = options.exchangeCredit ?? 0n;
+  await lock(tx, a.companyId + ":warehouse:" + input.cart.warehouseId);
+  const priced = await priceCart(tx, a, input.cart);
+  const total = cents(priced.total);
+  const payments = validatePayments(input, total - credit);
+  await lock(tx, a.companyId + ":sale-number");
+  const number =
+    (
+      await tx.sale.aggregate({
+        where: { companyId: a.companyId },
+        _max: { number: true },
+      })
+    )._max.number ?? 0;
+  const sale = await tx.sale.create({
+    data: {
+      companyId: a.companyId,
+      branchId: priced.warehouse.branchId,
+      warehouseId: priced.warehouse.id,
+      sellerId: a.membershipId,
+      customerId: input.cart.customerId,
+      number: number + 1,
+      status: "COMPLETED",
+      subtotal: priced.subtotal,
+      total: priced.total,
+      discount: priced.discount,
+      requestKey: input.requestKey,
+      requestHash,
+      cashSessionId: session.id,
+      exchangeCredit: reais(credit),
+    },
+  });
+  for (const item of priced.items) {
+    const { subtotal: _, ...data } = item;
+    void _;
+    await tx.saleItem.create({
+      data: { ...data, companyId: a.companyId, saleId: sale.id },
+    });
+    await moveStock(tx, a, {
+      warehouseId: priced.warehouse.id,
+      productId: item.productId,
+      delta: new Prisma.Decimal(item.quantity).negated(),
+      ...(options.returnId
+        ? { returnId: options.returnId }
+        : { saleId: sale.id }),
+      reason: options.returnId
+        ? `Saída por troca — reposição venda #${sale.number}`
+        : `Saída por venda #${sale.number}`,
+      type: "OUT",
+    });
+  }
+  await recordPayments(tx, a, sale, session, payments);
+  await tx.auditLog.create({
+    data: {
+      companyId: a.companyId,
+      actorId: a.membershipId,
+      action: "SALE_COMPLETED",
+      module: "sales",
+      recordId: sale.id,
+      metadata: {
+        branchId: sale.branchId,
+        warehouseId: sale.warehouseId,
+        total: sale.total.toString(),
+        itemDiscount: priced.itemDiscount,
+        discount: priced.discount,
+        manualPayments: true,
+        cashSessionId: session.id,
+        returnId: options.returnId ?? null,
+      },
+    },
+  });
+  return tx.sale.findUniqueOrThrow({
+    where: { id: sale.id },
+    include: saleInclude,
+  });
 }

@@ -142,6 +142,7 @@ export async function stockRoutes(app: FastifyInstance, db: Database) {
         where,
         include: {
           sale: { select: { id: true, number: true, status: true } },
+          returnOperation: { select: { id: true, number: true, kind: true } },
           warehouse: { include: { branch: true } },
           actor: { include: { user: { select: { name: true } } } },
           document: { select: { id: true, kind: true, documentNumber: true } },

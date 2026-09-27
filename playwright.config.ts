@@ -5,6 +5,7 @@ export default defineConfig({
     "browser.spec.ts",
     "stock.browser.spec.ts",
     "sales.browser.spec.ts",
+    "operations.browser.spec.ts",
   ],
   workers: 1,
   reporter: "list",

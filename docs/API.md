@@ -22,9 +22,9 @@ Prefixo `/api`. JSON. Sem CORS aberto: frontend usa mesma origem via proxy. Muta
 | PATCH /users/:id                             | users:manage; roleId e active, revoga sessões               |
 | GET /audit?page=1&limit=20                   | audit:read                                                  |
 
-Listas paginadas: `{items,total,page,limit}`; limite máximo 100. Validação usa Zod em `packages/contracts/src/index.ts`; chaves extras sensíveis são rejeitadas. Erros: 400 validação, 401 sessão inválida, 403 acesso/origem, 404 registro fora do escopo ou inexistente, 409 duplicação, 429 limite, 500 mensagem genérica. Campos monetários são strings decimais. Não há endpoints de estoque, vendas, financeiro ou emissão fiscal nesta etapa.
+Listas paginadas: `{items,total,page,limit}`; limite máximo 100. Validação usa Zod em `packages/contracts/src/index.ts`; chaves extras sensíveis são rejeitadas. Erros: 400 validação, 401 sessão inválida, 403 acesso/origem, 404 registro fora do escopo ou inexistente, 409 duplicação, 429 limite, 500 mensagem genérica. Campos monetários são strings decimais. Estoque e PDV foram adicionados posteriormente; consulte [PDV.md](PDV.md) e [CAIXA-TROCAS.md](CAIXA-TROCAS.md) para os endpoints operacionais atuais. Não há emissão fiscal.
 
-Perfis iniciais:
+Perfis da entrega inicial (as permissões atuais de estoque, PDV, caixa e trocas estão nos contratos e guias operacionais):
 
 | Perfil        | Acesso                                         |
 | ------------- | ---------------------------------------------- |

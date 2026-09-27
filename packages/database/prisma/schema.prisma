@@ -7,6 +7,10 @@ datasource db {
 }
 
 model Company {
+  cashSessions CashSession[]
+  returns ReturnOperation[]
+  credits CustomerCredit[]
+
   id String @id @default(uuid()) @db.Uuid
   slug String @unique
   name String
@@ -28,6 +32,9 @@ model Company {
   auditLogs AuditLog[]
 }
 model Branch {
+  cashSessions CashSession[]
+  returns ReturnOperation[]
+
   financialEntries FinancialEntry[]
   cashRegisters CashRegister[]
   id String @id @default(uuid()) @db.Uuid
@@ -71,6 +78,11 @@ model RolePermission {
   @@id([roleId,permissionCode])
 }
 model Membership {
+  openedCashSessions CashSession[] @relation("CashOpener")
+  closedCashSessions CashSession[] @relation("CashCloser")
+  cashMovements CashMovement[]
+  returns ReturnOperation[]
+
   stockDocuments StockDocument[]
   id String @id @default(uuid()) @db.Uuid
   companyId String @db.Uuid
@@ -102,6 +114,9 @@ model Session {
   @@index([membershipId])
 }
 model Customer {
+  returns ReturnOperation[]
+  credits CustomerCredit[]
+
   id String @id @default(uuid()) @db.Uuid
   companyId String @db.Uuid
   name String
@@ -221,6 +236,8 @@ model Product {
   @@index([companyId,publisher])
 }
 model Warehouse {
+  returns ReturnOperation[]
+
   sales Sale[]
   stockDocuments StockDocument[]
   id String @id @default(uuid()) @db.Uuid
@@ -252,6 +269,10 @@ enum StockMovementType {
   TRANSFER
 }
 model StockMovement {
+  returnId String? @db.Uuid
+  returnOperation ReturnOperation? @relation(fields:[companyId,returnId],references:[companyId,id])
+  @@unique([companyId,returnId,productId,type])
+
  saleId String? @db.Uuid
  sale Sale? @relation(fields:[companyId,saleId],references:[companyId,id])
  @@unique([companyId,saleId,productId,type])
@@ -283,6 +304,12 @@ enum SaleStatus {
   RETURNED
 }
 model Sale {
+  cashSessionId String? @db.Uuid
+  exchangeCredit Decimal @default(0) @db.Decimal(14,2)
+  cashSession CashSession? @relation(fields:[companyId,cashSessionId],references:[companyId,id])
+  returns ReturnOperation[] @relation("OriginalSale")
+  exchangeOrigin ReturnOperation? @relation("ReplacementSale")
+
  warehouseId String? @db.Uuid
  requestKey String? @db.Uuid
  requestHash String?
@@ -320,6 +347,10 @@ model Sale {
   @@index([companyId,status,createdAt])
 }
 model SaleItem {
+  publisher String?
+  returns ReturnItem[]
+  @@unique([companyId,id])
+
   isbn String?
   author String?
   id String @id @default(uuid()) @db.Uuid
@@ -373,6 +404,9 @@ enum EntryStatus {
   CANCELLED
 }
 model FinancialEntry {
+  returnId String? @db.Uuid
+  returnOperation ReturnOperation? @relation(fields:[companyId,returnId],references:[companyId,id])
+
  branchId String? @db.Uuid
  paymentId String? @db.Uuid
  installment Int?
@@ -405,9 +439,11 @@ model BankAccount {
   @@unique([companyId,id])
 }
 model CashRegister {
+  sessions CashSession[]
+
  branchId String? @db.Uuid
  branch Branch? @relation(fields:[companyId,branchId],references:[companyId,id])
- @@unique([companyId,branchId])
+ @@unique([companyId,branchId,name])
   id String @id @default(uuid()) @db.Uuid
   companyId String @db.Uuid
   name String
@@ -416,6 +452,15 @@ model CashRegister {
   @@unique([companyId,id])
 }
 model CashMovement {
+  cashSessionId String? @db.Uuid
+  actorId String? @db.Uuid
+  method PaymentMethod?
+  requestKey String? @db.Uuid
+  requestHash String?
+  cashSession CashSession? @relation(fields:[companyId,cashSessionId],references:[companyId,id])
+  actor Membership? @relation(fields:[companyId,actorId],references:[companyId,id])
+  @@unique([companyId,requestKey])
+
  saleId String? @db.Uuid
  paymentId String? @db.Uuid
  kind String @default("LEGACY")
@@ -508,4 +553,104 @@ model StockDocumentItem {
  document StockDocument @relation(fields:[companyId,documentId],references:[companyId,id])
  product Product @relation(fields:[companyId,productId],references:[companyId,id])
  @@unique([companyId,documentId,productId])
+}
+
+model CashSession {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ branchId String @db.Uuid
+ cashRegisterId String @db.Uuid
+ openedById String @db.Uuid
+ closedById String? @db.Uuid
+ status String @default("OPEN")
+ openedAt DateTime @default(now())
+ closedAt DateTime?
+ openingAmount Decimal @db.Decimal(14,2)
+ expectedAmount Decimal? @db.Decimal(14,2)
+ countedAmount Decimal? @db.Decimal(14,2)
+ difference Decimal? @db.Decimal(14,2)
+ closingSummary Json?
+ notes String?
+ requestKey String @db.Uuid
+ requestHash String
+ closeRequestKey String? @db.Uuid
+ closeRequestHash String?
+ company Company @relation(fields:[companyId],references:[id])
+ branch Branch @relation(fields:[companyId,branchId],references:[companyId,id])
+ cashRegister CashRegister @relation(fields:[companyId,cashRegisterId],references:[companyId,id])
+ openedBy Membership @relation("CashOpener",fields:[companyId,openedById],references:[companyId,id])
+ closedBy Membership? @relation("CashCloser",fields:[companyId,closedById],references:[companyId,id])
+ sales Sale[]
+ movements CashMovement[]
+ returns ReturnOperation[]
+ @@unique([companyId,id])
+ @@unique([companyId,requestKey])
+ @@unique([companyId,closeRequestKey])
+ @@index([companyId,branchId,status])
+}
+model ReturnOperation {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ branchId String @db.Uuid
+ warehouseId String @db.Uuid
+ cashSessionId String @db.Uuid
+ originalSaleId String @db.Uuid
+ replacementSaleId String? @db.Uuid
+ customerId String? @db.Uuid
+ actorId String @db.Uuid
+ number Int
+ kind String
+ reason String
+ returnedAmount Decimal @db.Decimal(14,2)
+ newAmount Decimal @db.Decimal(14,2)
+ difference Decimal @db.Decimal(14,2)
+ createdAt DateTime @default(now())
+ requestKey String @db.Uuid
+ requestHash String
+ company Company @relation(fields:[companyId],references:[id])
+ branch Branch @relation(fields:[companyId,branchId],references:[companyId,id])
+ warehouse Warehouse @relation(fields:[companyId,warehouseId],references:[companyId,id])
+ cashSession CashSession @relation(fields:[companyId,cashSessionId],references:[companyId,id])
+ originalSale Sale @relation("OriginalSale",fields:[companyId,originalSaleId],references:[companyId,id])
+ replacementSale Sale? @relation("ReplacementSale",fields:[companyId,replacementSaleId],references:[companyId,id])
+ customer Customer? @relation(fields:[companyId,customerId],references:[companyId,id])
+ actor Membership @relation(fields:[companyId,actorId],references:[companyId,id])
+ items ReturnItem[]
+ movements StockMovement[]
+ financialEntries FinancialEntry[]
+ credit CustomerCredit?
+ @@unique([companyId,id])
+ @@unique([companyId,number])
+ @@unique([companyId,requestKey])
+ @@unique([companyId,replacementSaleId])
+ @@index([companyId,originalSaleId])
+ @@index([companyId,branchId,createdAt])
+}
+model ReturnItem {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ returnId String @db.Uuid
+ saleItemId String @db.Uuid
+ quantity Int
+ amount Decimal @db.Decimal(14,2)
+ returnOperation ReturnOperation @relation(fields:[companyId,returnId],references:[companyId,id])
+ saleItem SaleItem @relation(fields:[companyId,saleItemId],references:[companyId,id])
+ @@unique([companyId,returnId,saleItemId])
+ @@index([companyId,saleItemId])
+}
+model CustomerCredit {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ customerId String @db.Uuid
+ returnId String @db.Uuid
+ amount Decimal @db.Decimal(14,2)
+ balance Decimal @db.Decimal(14,2)
+ status String @default("AVAILABLE")
+ createdAt DateTime @default(now())
+ company Company @relation(fields:[companyId],references:[id])
+ customer Customer @relation(fields:[companyId,customerId],references:[companyId,id])
+ returnOperation ReturnOperation @relation(fields:[companyId,returnId],references:[companyId,id])
+ @@unique([companyId,id])
+ @@unique([companyId,returnId])
+ @@index([companyId,customerId,status])
 }

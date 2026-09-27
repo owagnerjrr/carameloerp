@@ -1,5 +1,12 @@
+import { originalItemValues } from "../services/returns.js";
+import { reais } from "@caramelo/contracts";
+import {
+  salesFilter,
+  salesWhere,
+  salesAnalysis,
+} from "../services/sales-query.js";
 import type { FastifyInstance } from "fastify";
-import { Prisma, type Database } from "@caramelo/database";
+import { type Database } from "@caramelo/database";
 import { z } from "zod";
 import {
   checkoutSchema,
@@ -16,30 +23,45 @@ import {
   saleInclude,
 } from "../services/sales.js";
 const id = (params: unknown) => z.object({ id: z.uuid() }).parse(params).id;
-const filter = z
-  .object({
-    from: z.iso.date(),
-    to: z.iso.date(),
-    branchId: z.uuid().optional(),
-    operatorId: z.uuid().optional(),
-    customerId: z.uuid().optional(),
-    customerQuery: z.string().trim().max(100).optional(),
-    status: z
-      .enum(["COMPLETED", "CANCELLED", "QUOTE", "ORDER", "RETURNED"])
-      .optional(),
-    page: z.coerce.number().int().min(1).max(10000).default(1),
-  })
-  .strict()
-  .refine(
-    (v) =>
-      v.from <= v.to &&
-      (Date.parse(v.to) - Date.parse(v.from)) / 86400000 <= 366,
-    "Informe um período válido de até 366 dias",
-  );
 export async function salesRoutes(app: FastifyInstance, db: Database) {
+  app.get("/api/sales/analysis", async (req, reply) => {
+    const a = requirePermission(req, "sales:read"),
+      f = salesFilter.parse(req.query),
+      result = await salesAnalysis(db, a, f);
+    if (f.csv)
+      return reply
+        .header("Content-Type", "text/csv; charset=utf-8")
+        .header(
+          "Content-Disposition",
+          'attachment; filename="caramelo-vendas.csv"',
+        )
+        .send(result);
+    return result;
+  });
   app.get("/api/sales/options", async (req) => {
     const a = requirePermission(req, "sales:read");
     return {
+      cashSessions: await db.cashSession.findMany({
+        where: {
+          companyId: a.companyId,
+          status: "OPEN",
+          ...(a.branchId ? { branchId: a.branchId } : {}),
+          ...(!a.permissions.includes("cash:manage")
+            ? { openedById: a.membershipId }
+            : {}),
+        },
+        include: {
+          cashRegister: true,
+          openedBy: { select: { user: { select: { name: true } } } },
+        },
+      }),
+      cashRegisters: await db.cashRegister.findMany({
+        where: {
+          companyId: a.companyId,
+          ...(a.branchId ? { branchId: a.branchId } : {}),
+        },
+        select: { id: true, name: true },
+      }),
       warehouses: await db.warehouse.findMany({
         where: {
           companyId: a.companyId,
@@ -148,39 +170,17 @@ export async function salesRoutes(app: FastifyInstance, db: Database) {
   );
   app.get("/api/sales", async (req) => {
     const a = requirePermission(req, "sales:read"),
-      f = filter.parse(req.query);
+      f = salesFilter.parse(req.query);
     if (a.branchId && f.branchId && a.branchId !== f.branchId)
       return { items: [], total: 0, page: f.page, limit: 25 };
-    const where: Prisma.SaleWhereInput = {
-      companyId: a.companyId,
-      createdAt: {
-        gte: new Date(f.from + "T00:00:00-03:00"),
-        lt: new Date(Date.parse(f.to + "T00:00:00-03:00") + 86400000),
-      },
-      ...(a.branchId || f.branchId
-        ? { branchId: a.branchId ?? f.branchId }
-        : {}),
-      ...(f.operatorId ? { sellerId: f.operatorId } : {}),
-      ...(f.customerId ? { customerId: f.customerId } : {}),
-      ...(f.customerQuery
-        ? {
-            customer: {
-              OR: [
-                { name: { contains: f.customerQuery, mode: "insensitive" } },
-                { document: { contains: f.customerQuery } },
-                { phone: { contains: f.customerQuery } },
-                { email: { contains: f.customerQuery, mode: "insensitive" } },
-              ],
-            },
-          }
-        : {}),
-      ...(f.status ? { status: f.status } : {}),
-    };
+    const where = salesWhere(a, f);
     const [items, total] = await db.$transaction([
       db.sale.findMany({
         where,
         include: {
           branch: true,
+          cashSession: { include: { cashRegister: true } },
+          returns: { select: { id: true, kind: true } },
           customer: { select: { name: true } },
           seller: { select: { user: { select: { name: true } } } },
           items: { select: { quantity: true } },
@@ -205,6 +205,15 @@ export async function salesRoutes(app: FastifyInstance, db: Database) {
       include: saleInclude,
     });
     if (!sale) throw new HttpError(404, "Venda indisponível.");
-    return sale;
+    const values = originalItemValues(sale);
+    return {
+      ...sale,
+      items: sale.items.map((i) => ({
+        ...i,
+        paidAmount: reais(values.get(i.id)!),
+        availableReturn:
+          Number(i.quantity) - i.returns.reduce((n, r) => n + r.quantity, 0),
+      })),
+    };
   });
 }

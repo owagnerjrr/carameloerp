@@ -39,6 +39,7 @@ type Options = {
   categories: Array<{ id: string; name: string }>;
 };
 type Movement = {
+  returnOperation?: { id: string; number: number; kind: string } | null;
   sale?: { id: string; number: number; status: string } | null;
   id: string;
   createdAt: string;
@@ -782,7 +783,11 @@ function History({ row, onClose }: { row: StockRow; onClose: () => void }) {
                       : m.document
                         ? "Documento " +
                           (m.document.documentNumber || m.document.id)
-                        : "Legado sem documento"}
+                        : m.returnOperation
+                          ? (m.returnOperation.kind === "RETURN"
+                              ? "Devolução #"
+                              : "Troca #") + m.returnOperation.number
+                          : "Legado sem documento"}
                   </small>
                   <small>{m.reason}</small>
                 </td>

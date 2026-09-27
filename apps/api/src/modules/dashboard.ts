@@ -24,6 +24,9 @@ export async function dashboardRoutes(app: FastifyInstance, db: Database) {
       createdAt: { gte: start, lt: end },
     };
     const [
+      returnsPeriod,
+      returnsDay,
+      returnsMonth,
       revenue,
       daySales,
       monthSales,
@@ -38,6 +41,18 @@ export async function dashboardRoutes(app: FastifyInstance, db: Database) {
       customerCount,
       productCount,
     ] = await Promise.all([
+      db.returnOperation.aggregate({
+        where: { companyId, createdAt: { gte: start, lt: end } },
+        _sum: { returnedAmount: true },
+      }),
+      db.returnOperation.aggregate({
+        where: { companyId, createdAt: { gte: todayStart, lt: tomorrow } },
+        _sum: { returnedAmount: true },
+      }),
+      db.returnOperation.aggregate({
+        where: { companyId, createdAt: { gte: monthStart, lt: tomorrow } },
+        _sum: { returnedAmount: true },
+      }),
       db.sale.aggregate({ where, _sum: { total: true }, _count: true }),
       db.sale.aggregate({
         where: {
@@ -75,7 +90,11 @@ export async function dashboardRoutes(app: FastifyInstance, db: Database) {
         _sum: { amount: true },
       }),
       db.cashMovement.aggregate({
-        where: { companyId, createdAt: { lt: end } },
+        where: {
+          companyId,
+          createdAt: { lt: end },
+          OR: [{ method: null }, { method: { in: ["CASH", "PIX"] } }],
+        },
         _sum: { amount: true },
       }),
       db.sale.findMany({
@@ -109,7 +128,7 @@ export async function dashboardRoutes(app: FastifyInstance, db: Database) {
       >`SELECT p.id,p.description,SUM(i.quantity) AS quantity,SUM(i.quantity*i."unitPrice"-i.discount) AS total FROM "SaleItem" i JOIN "Sale" s ON s.id=i."saleId" AND s."companyId"=i."companyId" JOIN "Product" p ON p.id=i."productId" AND p."companyId"=i."companyId" WHERE s."companyId"=${companyId}::uuid AND s.status='COMPLETED' AND s."createdAt">=${start} AND s."createdAt"<${end} GROUP BY p.id ORDER BY SUM(i.quantity) DESC LIMIT 5`,
       db.$queryRaw<
         Array<{ date: string; income: Prisma.Decimal; expense: Prisma.Decimal }>
-      >`SELECT to_char(("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD') AS date, SUM(CASE WHEN amount>0 THEN amount ELSE 0 END) AS income,SUM(CASE WHEN amount<0 THEN -amount ELSE 0 END) AS expense FROM "CashMovement" WHERE "companyId"=${companyId}::uuid AND "createdAt">=${start} AND "createdAt"<${end} GROUP BY 1 ORDER BY 1`,
+      >`SELECT to_char(("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Sao_Paulo','YYYY-MM-DD') AS date, SUM(CASE WHEN amount>0 THEN amount ELSE 0 END) AS income,SUM(CASE WHEN amount<0 THEN -amount ELSE 0 END) AS expense FROM "CashMovement" WHERE (method IS NULL OR method IN ('CASH','PIX')) AND "companyId"=${companyId}::uuid AND "createdAt">=${start} AND "createdAt"<${end} GROUP BY 1 ORDER BY 1`,
       db.customer.count({ where: { companyId, active: true } }),
       db.product.count({ where: { companyId, active: true } }),
     ]);
@@ -129,11 +148,17 @@ export async function dashboardRoutes(app: FastifyInstance, db: Database) {
     }
     return {
       period: { from, to },
-      revenue: String(revenue._sum.total ?? 0),
+      revenue: new Prisma.Decimal(revenue._sum.total ?? 0)
+        .minus(returnsPeriod._sum.returnedAmount ?? 0)
+        .toString(),
       salesCount: revenue._count,
-      daySales: String(daySales._sum.total ?? 0),
+      daySales: new Prisma.Decimal(daySales._sum.total ?? 0)
+        .minus(returnsDay._sum.returnedAmount ?? 0)
+        .toString(),
       dayCount: daySales._count,
-      monthSales: String(monthSales._sum.total ?? 0),
+      monthSales: new Prisma.Decimal(monthSales._sum.total ?? 0)
+        .minus(returnsMonth._sum.returnedAmount ?? 0)
+        .toString(),
       receivables: String(receivables._sum.amount ?? 0),
       payables: String(payables._sum.amount ?? 0),
       balance: String(cash._sum.amount ?? 0),

@@ -70,7 +70,7 @@ try {
           data: { companyId, branchId: branch.id, name: "Estoque principal" },
         });
         const cash = await tx.cashRegister.create({
-          data: { companyId, name: "Caixa principal" },
+          data: { companyId, branchId: branch.id, name: "Caixa principal" },
         });
         const supplier = await tx.supplier.create({
           data: {

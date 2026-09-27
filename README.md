@@ -1,6 +1,6 @@
 # Caramelo ERP
 
-ERP web para uma **rede de livrarias brasileiras**. Interface em português e base modular preparada para evoluir para SaaS. Esta etapa entrega livros, entrada/estoque por filial e PDV operacional; não é um ERP completo nem um serviço pronto para comercialização.
+ERP web para uma **rede de livrarias brasileiras**. Interface em português e base modular preparada para evoluir para SaaS. Esta etapa entrega livros, entrada/estoque por filial, PDV, caixa, trocas e devoluções; não é um ERP completo nem um serviço pronto para comercialização.
 
 ## O que já funciona
 
@@ -16,9 +16,13 @@ ERP web para uma **rede de livrarias brasileiras**. Interface em português e ba
 
 Entradas, ajustes, vendas e cancelamentos são operacionais e persistem no PostgreSQL. O PDV registra pagamentos manuais e financeiro básico; não há emissão fiscal, integração bancária ou TEF.
 
+## Caixa, trocas e consulta operacional
+
+Entregues abertura, suprimento/sangria, fechamento com conferência, trocas parciais com pagamento da diferença, devoluções com vale-crédito e consultas por vendas/itens/caixas/operadores/pagamentos/horários com CSV. O vale é emitido e persistido; resgate futuro ainda está pendente. Guia, endpoints, regras e limites: [docs/CAIXA-TROCAS.md](docs/CAIXA-TROCAS.md). Migration: `202609270001_cash_returns`.
+
 ## PDV e vendas
 
-Abra **PDV / Vendas**, escolha filial/depósito, leia código+Enter ou pesquise o livro, informe cliente opcional, descontos e pagamentos. Confirme o resumo para gravar venda, itens, pagamentos, baixa de estoque, financeiro/caixa e auditoria em uma única transação. O carrinho não altera saldo. Dinheiro calcula troco; PIX/débito/crédito exigem confirmação manual externa; crédito admite parcelas e pagamentos mistos fecham exatamente o total.
+Primeiro abra uma sessão em **Caixa**. Depois abra **PDV / Vendas**, escolha filial/depósito, leia código+Enter ou pesquise o livro, informe cliente opcional, descontos e pagamentos. Confirme o resumo para gravar venda, itens, pagamentos, baixa de estoque, financeiro/caixa e auditoria em uma única transação. O carrinho não altera saldo. Dinheiro calcula troco; PIX/débito/crédito exigem confirmação manual externa; crédito admite parcelas e pagamentos mistos fecham exatamente o total.
 
 Histórico permite filtros e detalhes. Cancelamento autorizado exige motivo, recompõe estoque, cancela recebíveis e compensa o caixa, mantendo a venda e sua auditoria. Migration aditiva: `202609260002_pdv_sales`. Guia completo, regras de desconto/parcelas, endpoints, limites e testes: [docs/PDV.md](docs/PDV.md). Decisão arquitetural: [docs/PDV-ARQUITETURA.md](docs/PDV-ARQUITETURA.md).
 

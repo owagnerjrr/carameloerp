@@ -1,3 +1,4 @@
+import { openTestCash } from "./cash-fixture.js";
 import { beforeAll, afterAll, it, expect } from "vitest";
 import { randomUUID } from "node:crypto";
 import { buildApp } from "../apps/api/src/app.js";
@@ -121,6 +122,8 @@ beforeAll(async () => {
     if (i === 0) cookie = c;
     else seller = c;
   }
+  await openTestCash(app, cookie, f.a.id);
+  await openTestCash(app, cookie, f.b.id);
   book = await newBook("DEMO-PDV", 10);
 });
 afterAll(async () => {
@@ -207,7 +210,14 @@ it("executa PIX → dinheiro/troco → crédito 2x → misto → cancelamento, c
     ["25", "OPEN"],
     ["25", "OPEN"],
   ]);
-  expect(credit.json().cashMovements).toHaveLength(0);
+  expect(
+    credit
+      .json()
+      .cashMovements.filter(
+        (m: { method: string }) => m.method === "CASH" || m.method === "PIX",
+      ),
+  ).toHaveLength(0);
+  expect(credit.json().cashMovements[0].method).toBe("CREDIT_CARD");
   expect(await balance()).toBe("6");
   const mixedInput = checkout(2);
   mixedInput.payments = [payment("PIX", "40"), payment("DEBIT_CARD", "60")];

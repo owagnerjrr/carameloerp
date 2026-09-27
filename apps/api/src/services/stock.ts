@@ -31,6 +31,7 @@ export async function moveStock(
     delta: Prisma.Decimal;
     documentId?: string;
     saleId?: string;
+    returnId?: string;
     reason: string;
     type: "IN" | "OUT" | "ADJUSTMENT";
   },
@@ -65,6 +66,7 @@ export async function moveStock(
       afterQuantity: after,
       documentId: input.documentId,
       saleId: input.saleId,
+      returnId: input.returnId,
       reason: input.reason,
     },
   });

@@ -45,6 +45,7 @@ export const salePaymentSchema = z
 export const checkoutSchema = z
   .object({
     requestKey: z.uuid(),
+    cashSessionId: z.uuid().optional(),
     cart: quoteSchema,
     payments: z.array(salePaymentSchema).max(8),
   })

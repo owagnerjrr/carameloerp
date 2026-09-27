@@ -38,7 +38,20 @@ const AuditPage = lazy(() =>
 const SalesPage = lazy(() =>
   import("./pages/Sales").then((m) => ({ default: m.SalesPage })),
 );
+const CashPage = lazy(() =>
+  import("./pages/Cash").then((m) => ({ default: m.CashPage })),
+);
+const ReturnsPage = lazy(() =>
+  import("./pages/Returns").then((m) => ({ default: m.ReturnsPage })),
+);
 const pages = [
+  { id: "cash", label: "Caixa", icon: Wallet, permission: "cash:read" },
+  {
+    id: "returns",
+    label: "Trocas / Devoluções",
+    icon: ClipboardList,
+    permission: "returns:create",
+  },
   {
     id: "sales",
     label: "PDV / Vendas",
@@ -171,6 +184,8 @@ export function App() {
                   "products",
                   "stock",
                   "sales",
+                  "cash",
+                  "returns",
                 ].includes(p.id) && auth.permissions.includes(p.permission),
             )
             .map((p) => (
@@ -294,6 +309,10 @@ export function App() {
               <Catalog key={page} kind={page} auth={auth} />
             ) : page === "users" ? (
               <UsersPage auth={auth} />
+            ) : page === "cash" ? (
+              <CashPage auth={auth} />
+            ) : page === "returns" ? (
+              <ReturnsPage auth={auth} />
             ) : page === "sales" ? (
               <SalesPage auth={auth} />
             ) : page === "stock" ? (

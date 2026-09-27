@@ -1,3 +1,4 @@
+import { openTestCash } from "./cash-fixture.js";
 import { test, expect } from "@playwright/test";
 import { createServer, type ViteDevServer } from "vite";
 import { createRequire } from "node:module";
@@ -58,6 +59,7 @@ test.beforeAll(async () => {
     },
   });
   expect(entry.statusCode).toBe(201);
+  await openTestCash(app, cookie, fixture.a.id, origin);
   await app.listen({ host: "127.0.0.1", port: 3335 });
   vite = await createServer({
     configFile: false,

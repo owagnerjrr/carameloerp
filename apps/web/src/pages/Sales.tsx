@@ -1,3 +1,6 @@
+import { SalesMovements } from "./SalesMovements";
+import { ReturnForm, ReturnDetail } from "./Returns";
+import { PaymentFields, newPayment, type PaymentDraft } from "./PaymentFields";
 import {
   useEffect,
   useRef,
@@ -9,13 +12,11 @@ import {
   cents,
   reais,
   discountCents,
-  splitCents,
   paymentNames,
   type Discount,
-  type Checkout,
 } from "@caramelo/contracts";
 import { api, money, dateTime, type Auth, type Page } from "../api";
-import { ErrorMessage, Modal, Pagination } from "../components";
+import { ErrorMessage, Modal } from "../components";
 import { CatalogForm, type Row } from "./Catalog";
 import { useBarcodeReader } from "../useBarcodeReader";
 type Book = {
@@ -31,6 +32,12 @@ type Book = {
 type CartLine = { book: Book; quantity: number; discount: Discount };
 type Customer = { id: string; name: string; document?: string | null };
 type Options = {
+  cashSessions: Array<{
+    id: string;
+    branchId: string;
+    cashRegister: { name: string };
+    openedBy: { user: { name: string } };
+  }>;
   warehouses: Array<{
     id: string;
     name: string;
@@ -38,8 +45,10 @@ type Options = {
   }>;
   operators: Array<{ id: string; user: { name: string } }>;
 };
-type PaymentDraft = Checkout["payments"][number] & { id: string };
 type Sale = {
+  cashSession?: { cashRegister: { name: string } } | null;
+  returns?: Array<{ id: string; number: number; kind: string }>;
+  exchangeOrigin?: { id: string } | null;
   id: string;
   number: number;
   createdAt: string;
@@ -92,21 +101,6 @@ type Sale = {
   financialEntries?: Array<{ id: string; amount: string; status: string }>;
 };
 const zero = (): Discount => ({ type: "AMOUNT", value: "0" });
-const newPayment = (): PaymentDraft => ({
-  id: crypto.randomUUID(),
-  method: "PIX",
-  amount: "0",
-  installments: 1,
-  confirmed: false,
-});
-function today() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Sao_Paulo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
 function preview(rows: CartLine[], discount: Discount) {
   try {
     let subtotal = 0n,
@@ -144,6 +138,7 @@ export function SalesPage({ auth }: { auth: Auth }) {
       auth.permissions.includes("sales:create") ? "new" : "history",
     ),
     [options, setOptions] = useState<Options>({
+      cashSessions: [],
       warehouses: [],
       operators: [],
     }),
@@ -194,7 +189,7 @@ export function SalesPage({ auth }: { auth: Auth }) {
         </div>
       )}
       <div hidden={tab !== "history"}>
-        <SalesHistory options={options} version={version} onView={setDetail} />
+        <SalesMovements version={version} onView={setDetail} />
       </div>
       {detail && (
         <SaleDetail
@@ -258,6 +253,7 @@ function PointOfSale({
   onDone: () => void;
   onView: (id: string) => void;
 }) {
+  const [cashSession, setCashSession] = useState("");
   const [warehouse, setWarehouse] = useState(""),
     [rows, updateRows] = useState<CartLine[]>([]),
     [customer, setCustomer] = useState<Customer | null>(null),
@@ -347,10 +343,41 @@ function PointOfSale({
       discount: r.discount,
     })),
   });
-  function changePayment(id: string, update: Partial<PaymentDraft>) {
-    setPayments((p) => p.map((x) => (x.id === id ? { ...x, ...update } : x)));
-    renew();
-  }
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (
+        !active ||
+        busy ||
+        review ||
+        success ||
+        bookSearch ||
+        customerSearch ||
+        createCustomer ||
+        e.altKey ||
+        e.ctrlKey ||
+        e.metaKey
+      )
+        return;
+      const keys = ["F2", "F3", "F4", "F8", "F10"];
+      if (!keys.includes(e.key)) return;
+      e.preventDefault();
+      if (e.key === "F2") setCustomerSearch(true);
+      if (e.key === "F3" && warehouse) setBookSearch(true);
+      if (e.key === "F4")
+        document
+          .querySelector<HTMLInputElement>('[aria-label="Desconto da venda"]')
+          ?.focus();
+      if (e.key === "F8")
+        document
+          .querySelector<HTMLInputElement>(
+            '[aria-label="Valor do pagamento 1"]',
+          )
+          ?.focus();
+      if (e.key === "F10" && rows.length && pending === 0) void reviewSale();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  });
   async function reviewSale() {
     setBusy(true);
     setError("");
@@ -374,6 +401,7 @@ function PointOfSale({
         method: "POST",
         body: JSON.stringify({
           requestKey: key.current,
+          cashSessionId: cashSession || undefined,
           cart: cart(),
           payments: payments.map(({ id: _, ...p }) => {
             void _;
@@ -439,6 +467,34 @@ function PointOfSale({
   return (
     <div className="pdv-layout">
       <section className="card stock-entry">
+        <p className="helper-text">
+          F2 cliente · F3 livro · F4 desconto · F8 pagamento · F10 finalizar ·
+          Esc fechar modal
+        </p>
+        <label>
+          Caixa aberto
+          <select
+            aria-label="Caixa do PDV"
+            value={cashSession}
+            disabled={busy || review || rows.length > 0}
+            onChange={(e) => {
+              setCashSession(e.target.value);
+              renew();
+            }}
+          >
+            <option value="">Caixa do operador na filial selecionada</option>
+            {options.cashSessions?.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.cashRegister.name} · {s.openedBy.user.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {!options.cashSessions?.length && (
+          <p className="stock-warning">
+            Abra uma sessão no menu Caixa antes de vender.
+          </p>
+        )}
         <div className="pdv-context">
           <label>
             Filial / depósito
@@ -651,159 +707,13 @@ function PointOfSale({
         <p className="helper-text">
           Confirme PIX e cartão somente após receber fora do Caramelo.
         </p>
-        <fieldset className="stock-fieldset" disabled={busy || review}>
-          {payments.map((p, i) => {
-            let change = "—",
-              parts = "";
-            try {
-              change = reais(cents(p.receivedAmount ?? "0") - cents(p.amount));
-              if (p.method === "CREDIT_CARD")
-                parts = splitCents(cents(p.amount), p.installments)
-                  .map((v) => money(reais(v)))
-                  .join(" + ");
-            } catch {
-              /* incomplete form */
-            }
-            return (
-              <div className="pdv-payment" key={p.id}>
-                <label>
-                  Forma de pagamento
-                  <select
-                    aria-label={`Forma de pagamento ${i + 1}`}
-                    value={p.method}
-                    onChange={(e) =>
-                      changePayment(p.id, {
-                        method: e.target.value as PaymentDraft["method"],
-                        receivedAmount: undefined,
-                        installments: 1,
-                        confirmed: false,
-                      })
-                    }
-                  >
-                    {Object.entries(paymentNames).map(([v, n]) => (
-                      <option value={v} key={v}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Valor aplicado (R$)
-                  <input
-                    aria-label={`Valor do pagamento ${i + 1}`}
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={p.amount}
-                    onChange={(e) =>
-                      changePayment(p.id, { amount: e.target.value })
-                    }
-                  />
-                </label>
-                {p.method === "CASH" ? (
-                  <>
-                    <label>
-                      Valor recebido (R$)
-                      <input
-                        aria-label={`Valor recebido ${i + 1}`}
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={p.receivedAmount ?? ""}
-                        onChange={(e) =>
-                          changePayment(p.id, {
-                            receivedAmount: e.target.value,
-                          })
-                        }
-                      />
-                    </label>
-                    <p>
-                      Troco:{" "}
-                      <strong>{change === "—" ? change : money(change)}</strong>
-                    </p>
-                  </>
-                ) : (
-                  <label className="pdv-checkbox">
-                    <input
-                      type="checkbox"
-                      aria-label={`Recebimento externo confirmado ${i + 1}`}
-                      checked={p.confirmed}
-                      onChange={(e) =>
-                        changePayment(p.id, { confirmed: e.target.checked })
-                      }
-                    />
-                    Pagamento confirmado na maquininha / conta externa
-                  </label>
-                )}
-                {p.method === "CREDIT_CARD" && (
-                  <>
-                    <label>
-                      Parcelas
-                      <select
-                        aria-label={`Parcelas ${i + 1}`}
-                        value={p.installments}
-                        onChange={(e) =>
-                          changePayment(p.id, {
-                            installments: Number(e.target.value),
-                          })
-                        }
-                      >
-                        {Array.from({ length: 12 }, (_, n) => (
-                          <option key={n} value={n + 1}>
-                            {n + 1}x
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <small>{parts}</small>
-                  </>
-                )}
-                {(p.method === "CREDIT_CARD" || p.method === "DEBIT_CARD") && (
-                  <label>
-                    Bandeira (opcional)
-                    <input
-                      value={p.cardBrand ?? ""}
-                      maxLength={60}
-                      onChange={(e) =>
-                        changePayment(p.id, { cardBrand: e.target.value })
-                      }
-                    />
-                  </label>
-                )}
-                <label>
-                  Referência / observação (opcional)
-                  <input
-                    value={p.reference ?? ""}
-                    maxLength={200}
-                    placeholder="Sem dados sensíveis do cartão"
-                    onChange={(e) =>
-                      changePayment(p.id, { reference: e.target.value })
-                    }
-                  />
-                </label>
-                <button
-                  className="secondary"
-                  onClick={() => {
-                    setPayments((v) => v.filter((x) => x.id !== p.id));
-                    renew();
-                  }}
-                >
-                  Remover pagamento {i + 1}
-                </button>
-              </div>
-            );
-          })}
-          <button
-            className="secondary"
-            disabled={payments.length >= 8}
-            onClick={() => {
-              setPayments((v) => [...v, newPayment()]);
-              renew();
-            }}
-          >
-            Adicionar pagamento
-          </button>
-        </fieldset>
+        <PaymentFields
+          payments={payments}
+          setPayments={setPayments}
+          renew={renew}
+          busy={busy}
+          review={review}
+        />
         <div className="pdv-totals">
           <span>Aplicado</span>
           <strong>{money(paid)}</strong>
@@ -997,211 +907,6 @@ function SearchForm({
     </form>
   );
 }
-function SalesHistory({
-  options,
-  version,
-  onView,
-}: {
-  options: Options;
-  version: number;
-  onView: (id: string) => void;
-}) {
-  const filters = useRef<HTMLFormElement>(null);
-  const [from, setFrom] = useState(today),
-    [to, setTo] = useState(today),
-    [query, setQuery] = useState("from=" + today() + "&to=" + today()),
-    [page, setPage] = useState(1),
-    [data, setData] = useState<Page<Sale> | null>(null),
-    [error, setError] = useState("");
-  useEffect(() => {
-    let current = true;
-    setError("");
-    api<Page<Sale>>("/sales?" + query + "&page=" + page)
-      .then((r) => {
-        if (current) setData(r);
-      })
-      .catch((e) => {
-        if (current) setError(e.message);
-      });
-    return () => {
-      current = false;
-    };
-  }, [query, page, version]);
-  function period(days: number) {
-    const end = today(),
-      start = new Date(end + "T12:00:00Z");
-    start.setUTCDate(start.getUTCDate() - days + 1);
-    const day = start.toISOString().slice(0, 10);
-    setFrom(day);
-    setTo(end);
-    const values = new FormData(filters.current!);
-    values.set("from", day);
-    values.set("to", end);
-    setQuery(
-      new URLSearchParams(
-        [...values.entries()].filter(([, v]) => !!v) as [string, string][],
-      ).toString(),
-    );
-    setPage(1);
-  }
-  return (
-    <section className="card stock-entry">
-      <h2>Histórico de vendas</h2>
-      <div className="stock-tabs">
-        {[
-          [1, "Hoje"],
-          [7, "7 dias"],
-          [30, "30 dias"],
-        ].map(([d, n]) => (
-          <button
-            className="secondary"
-            key={d}
-            onClick={() => period(Number(d))}
-          >
-            {n}
-          </button>
-        ))}
-      </div>
-      <form
-        ref={filters}
-        className="stock-filters"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const values = Object.entries(
-            Object.fromEntries(new FormData(e.currentTarget)),
-          ).filter(([, v]) => !!v);
-          setQuery(
-            new URLSearchParams(values as [string, string][]).toString(),
-          );
-          setPage(1);
-        }}
-      >
-        <label>
-          De
-          <input
-            type="date"
-            name="from"
-            required
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-          />
-        </label>
-        <label>
-          Até
-          <input
-            type="date"
-            name="to"
-            required
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-          />
-        </label>
-        <label>
-          Filial
-          <select name="branchId">
-            <option value="">Todas autorizadas</option>
-            {[
-              ...new Map(
-                options.warehouses.map((w) => [w.branch.id, w.branch]),
-              ).values(),
-            ].map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Operador
-          <select name="operatorId">
-            <option value="">Todos</option>
-            {options.operators.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.user.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Cliente
-          <input
-            name="customerQuery"
-            placeholder="Nome, documento ou contato"
-          />
-        </label>
-        <label>
-          Status
-          <select name="status">
-            <option value="">Todos</option>
-            <option value="COMPLETED">Concluída</option>
-            <option value="CANCELLED">Cancelada</option>
-            <option value="QUOTE">Orçamento legado</option>
-            <option value="ORDER">Pedido legado</option>
-            <option value="RETURNED">Devolvida legada</option>
-          </select>
-        </label>
-        <button className="primary">Filtrar vendas</button>
-      </form>
-      <ErrorMessage message={error} />
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              {[
-                "Número / Data",
-                "Cliente",
-                "Filial / Operador",
-                "Exemplares",
-                "Total",
-                "Pagamento",
-                "Status",
-                "",
-              ].map((s, i) => (
-                <th key={i}>{s}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data?.items.map((s) => (
-              <tr key={s.id}>
-                <td>
-                  #{s.number}
-                  <small>{dateTime(s.createdAt)}</small>
-                </td>
-                <td>{s.customer?.name ?? "Não identificado"}</td>
-                <td>
-                  {s.branch.name}
-                  <small>{s.seller.user.name}</small>
-                </td>
-                <td>{s.items.reduce((n, i) => n + Number(i.quantity), 0)}</td>
-                <td>{money(s.total)}</td>
-                <td>
-                  {s.payments
-                    .map((p) => paymentNames[p.method] ?? p.method)
-                    .join(" + ")}
-                </td>
-                <td>
-                  {s.status === "COMPLETED"
-                    ? "Concluída"
-                    : s.status === "CANCELLED"
-                      ? "Cancelada"
-                      : s.status}
-                </td>
-                <td>
-                  <button className="secondary" onClick={() => onView(s.id)}>
-                    Ver venda #{s.number}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {data?.items.length === 0 && <p>Nenhuma venda neste período.</p>}
-      {data && <Pagination {...data} onChange={setPage} />}
-    </section>
-  );
-}
 function SaleDetail({
   id,
   auth,
@@ -1213,6 +918,9 @@ function SaleDetail({
   onClose: () => void;
   onChange: () => void;
 }) {
+  const [returning, setReturning] = useState(false),
+    [returnDetail, setReturnDetail] = useState<string | null>(null),
+    [revision, setRevision] = useState(0);
   const [sale, setSale] = useState<Sale | null>(null),
     [error, setError] = useState(""),
     [cancel, setCancel] = useState(false),
@@ -1222,7 +930,7 @@ function SaleDetail({
     api<Sale>("/sales/" + id)
       .then(setSale)
       .catch((e) => setError(e.message));
-  }, [id]);
+  }, [id, revision]);
   async function cancelSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
@@ -1269,6 +977,45 @@ function SaleDetail({
                   : sale.status}
             </strong>
           </p>
+          <p>
+            Caixa:{" "}
+            {sale.cashSession?.cashRegister.name ?? "Sem sessão histórica"}
+          </p>
+          {sale.returns?.map((r) => (
+            <button
+              className="secondary"
+              key={r.id}
+              onClick={() => setReturnDetail(r.id)}
+            >
+              {r.kind === "RETURN" ? "Devolução" : "Troca"} #{r.number}
+            </button>
+          ))}
+          {auth.permissions.includes("returns:create") &&
+            sale.status === "COMPLETED" &&
+            sale.requestKey && (
+              <button className="secondary" onClick={() => setReturning(true)}>
+                Trocar / devolver
+              </button>
+            )}
+          {returning && (
+            <ReturnForm
+              saleId={id}
+              auth={auth}
+              onClose={() => setReturning(false)}
+              onDone={(rid) => {
+                setReturning(false);
+                setReturnDetail(rid);
+                setRevision((v) => v + 1);
+                onChange();
+              }}
+            />
+          )}
+          {returnDetail && (
+            <ReturnDetail
+              id={returnDetail}
+              onClose={() => setReturnDetail(null)}
+            />
+          )}
           {sale.cancelReason && (
             <p>Motivo do cancelamento: {sale.cancelReason}</p>
           )}
@@ -1346,6 +1093,8 @@ function SaleDetail({
           {auth.permissions.includes("sales:cancel") &&
             sale.status === "COMPLETED" &&
             sale.requestKey &&
+            !sale.returns?.length &&
+            !sale.exchangeOrigin &&
             !cancel && (
               <button className="secondary" onClick={() => setCancel(true)}>
                 Cancelar venda
