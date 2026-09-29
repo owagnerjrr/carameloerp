@@ -1,0 +1,11 @@
+# Feiras/Eventos — bloco 1: decisão de arquitetura
+
+Reutilizar Warehouse, StockBalance, StockMovement e moveStock. Cada evento tem dois depósitos exclusivos na mesma filial: EVENT e EVENT_TRANSIT. Depósitos STANDARD continuam sendo os únicos permitidos no PDV, entradas e ajustes comuns. Nenhuma venda de evento neste bloco.
+
+Escolhida a entrada física no evento na confirmação de recebimento. Envio: origem STANDARD diminui e trânsito aumenta atomicamente. Recebimento: trânsito diminui e EVENT aumenta pela quantidade conferida. A posse total destinada ao evento é trânsito + recebido; não há duplicação. Divergência negativa exige justificativa, permanece em trânsito e bloqueia encerramento. Recebimentos complementares rastreados permitem conferir o restante; perda/extravio e excedentes físicos precisam de procedimento futuro, nunca ajuste silencioso.
+
+Evento possui código por empresa/ano e documentos numerados ENV/REC/RET. EventDocument também registra comandos de lifecycle/cadastro para idempotência com hash; EventDocumentItem preserva livro/quantidades. Movimentos vinculam o documento. Todas as mutações: request lock → evento → depósitos em ordem lexical → numeração; serviços existentes só travam um depósito, sem ciclo inverso. Créditos/caixa/vendas não são recriados.
+
+DRAFT → PREPARING → IN_TRANSIT → OPEN → CLOSING → CLOSED. Primeiro envio inicia trânsito; primeira conferência física abre evento. Novos envios em PREPARING/IN_TRANSIT/OPEN; recebimentos em IN_TRANSIT/OPEN/CLOSING. Retorno em OPEN/CLOSING inicia CLOSING, sem novos envios. Fechar exige saldo zero nos dois depósitos e todos os envios conferidos. Cancelar somente DRAFT/PREPARING sem envio. Edição de cadastro somente antes do primeiro envio; filial e depósitos imutáveis. Responsável é Membership ativo da filial ou com acesso empresarial.
+
+Permissões events:read/create/manage/stock. Administrador/Gerente recebem todas, Estoque recebe read/stock, sempre limitados ao escopo da sessão. Responsável designado não amplia permissões. Recebimento registra o operador autenticado autorizado e responsável designado. Filiais diferentes não podem ser origem/destino. Auditoria armazena filial, evento, documento, itens, operador e data sem segredos.

@@ -7,6 +7,7 @@ export async function warehouseAccess(
   tx: Transaction,
   auth: AuthContext,
   id: string,
+  allowEvent = false,
 ) {
   const warehouse = await tx.warehouse.findFirst({
     where: {
@@ -16,6 +17,11 @@ export async function warehouseAccess(
     },
   });
   if (!warehouse) throw new HttpError(404, "Depósito/filial indisponível.");
+  if (!allowEvent && warehouse.kind !== "STANDARD")
+    throw new HttpError(
+      409,
+      "Estoque de evento exige operação pelo módulo Feiras / Eventos.",
+    );
   return warehouse;
 }
 export async function lock(tx: Transaction, key: string) {
@@ -29,6 +35,7 @@ export async function moveStock(
     warehouseId: string;
     productId: string;
     delta: Prisma.Decimal;
+    eventDocumentId?: string;
     documentId?: string;
     saleId?: string;
     returnId?: string;
@@ -36,7 +43,7 @@ export async function moveStock(
     type: "IN" | "OUT" | "ADJUSTMENT";
   },
 ) {
-  await warehouseAccess(tx, auth, input.warehouseId);
+  await warehouseAccess(tx, auth, input.warehouseId, !!input.eventDocumentId);
   await lock(tx, auth.companyId + ":warehouse:" + input.warehouseId);
   const key = {
     companyId: auth.companyId,
@@ -64,6 +71,7 @@ export async function moveStock(
       quantity: input.delta,
       beforeQuantity: before,
       afterQuantity: after,
+      eventDocumentId: input.eventDocumentId,
       documentId: input.documentId,
       saleId: input.saleId,
       returnId: input.returnId,

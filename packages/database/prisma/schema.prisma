@@ -7,6 +7,8 @@ datasource db {
 }
 
 model Company {
+  events Event[]
+
   creditMovements CustomerCreditMovement[]
   cashSessions CashSession[]
   returns ReturnOperation[]
@@ -33,6 +35,8 @@ model Company {
   auditLogs AuditLog[]
 }
 model Branch {
+  events Event[]
+
   cashSessions CashSession[]
   returns ReturnOperation[]
 
@@ -79,6 +83,9 @@ model RolePermission {
   @@id([roleId,permissionCode])
 }
 model Membership {
+  responsibleEvents Event[]
+  eventDocuments EventDocument[]
+
   creditMovements CustomerCreditMovement[]
   openedCashSessions CashSession[] @relation("CashOpener")
   closedCashSessions CashSession[] @relation("CashCloser")
@@ -182,6 +189,8 @@ model Category {
   @@unique([companyId,name])
 }
 model Product {
+  eventItems EventDocumentItem[]
+
   stockDocumentItems StockDocumentItem[]
   id String @id @default(uuid()) @db.Uuid
   companyId String @db.Uuid
@@ -239,6 +248,11 @@ model Product {
   @@index([companyId,publisher])
 }
 model Warehouse {
+  kind String @default("STANDARD")
+  event Event? @relation("EventStock")
+  transitEvent Event? @relation("EventTransit")
+  eventOrigins EventDocument[]
+
   returns ReturnOperation[]
 
   sales Sale[]
@@ -272,6 +286,10 @@ enum StockMovementType {
   TRANSFER
 }
 model StockMovement {
+  eventDocumentId String? @db.Uuid
+  eventDocument EventDocument? @relation(fields:[companyId,eventDocumentId],references:[companyId,id])
+  @@unique([companyId,eventDocumentId,warehouseId,productId])
+
   returnId String? @db.Uuid
   returnOperation ReturnOperation? @relation(fields:[companyId,returnId],references:[companyId,id])
   @@unique([companyId,returnId,productId,type])
@@ -685,4 +703,78 @@ model CustomerCreditMovement {
  returnOperation ReturnOperation @relation(fields:[companyId,returnId],references:[companyId,id])
  @@unique([companyId,creditId,saleId,kind])
  @@index([companyId,customerId,createdAt])
+}
+
+model Event {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ branchId String @db.Uuid
+ responsibleId String @db.Uuid
+ warehouseId String @db.Uuid
+ transitWarehouseId String @db.Uuid
+ code String
+ name String
+ description String?
+ type String
+ startsAt DateTime @db.Date
+ endsAt DateTime @db.Date
+ location String
+ city String
+ state String
+ notes String?
+ status String @default("DRAFT")
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ company Company @relation(fields:[companyId],references:[id])
+ branch Branch @relation(fields:[companyId,branchId],references:[companyId,id])
+ responsible Membership @relation(fields:[companyId,responsibleId],references:[companyId,id])
+ warehouse Warehouse @relation("EventStock",fields:[companyId,warehouseId],references:[companyId,id])
+ transitWarehouse Warehouse @relation("EventTransit",fields:[companyId,transitWarehouseId],references:[companyId,id])
+ documents EventDocument[]
+ @@unique([companyId,id])
+ @@unique([companyId,code])
+ @@unique([companyId,warehouseId])
+ @@unique([companyId,transitWarehouseId])
+ @@index([companyId,branchId,status,startsAt])
+}
+model EventDocument {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ eventId String @db.Uuid
+ actorId String @db.Uuid
+ warehouseId String? @db.Uuid
+ dispatchId String? @db.Uuid
+ code String
+ kind String
+ status String @default("CONFIRMED")
+ notes String?
+ requestKey String @db.Uuid
+ requestHash String
+ createdAt DateTime @default(now())
+ event Event @relation(fields:[companyId,eventId],references:[companyId,id])
+ actor Membership @relation(fields:[companyId,actorId],references:[companyId,id])
+ warehouse Warehouse? @relation(fields:[companyId,warehouseId],references:[companyId,id])
+ dispatch EventDocument? @relation("EventReceipt",fields:[companyId,dispatchId],references:[companyId,id])
+ receipts EventDocument[] @relation("EventReceipt")
+ items EventDocumentItem[]
+ movements StockMovement[]
+ @@unique([companyId,id])
+ @@unique([companyId,code])
+ @@unique([companyId,requestKey])
+ @@index([companyId,eventId,createdAt])
+}
+model EventDocumentItem {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ documentId String @db.Uuid
+ productId String @db.Uuid
+ title String
+ isbn String?
+ author String?
+ publisher String?
+ quantity Int
+ expectedQuantity Int?
+ document EventDocument @relation(fields:[companyId,documentId],references:[companyId,id])
+ product Product @relation(fields:[companyId,productId],references:[companyId,id])
+ @@unique([companyId,documentId,productId])
 }

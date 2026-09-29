@@ -45,3 +45,7 @@ PIX, boleto, TEF, WhatsApp, e-commerce, delivery, APIs bancárias e contabilidad
 ## FASE 9 — SaaS / planos / assinaturas
 
 Provisionamento e onboarding, planos/limites, assinatura/cobrança, uso, isolamento reforçado, exportação/eliminação conforme política, observabilidade, backups e restauração, CI/CD, secrets manager, rate limit distribuído, retenção de auditoria, testes de carga e revisão de segurança/LGPD. Comercialização somente após esses critérios operacionais.
+
+## Feiras / Eventos — bloco 1
+
+Cadastro, envio com trânsito rastreável, conferência com divergências, retorno parcial e encerramento operacional. Reutiliza estoque existente; não inclui venda/caixa no evento. Guia: [EVENTOS.md](EVENTOS.md).

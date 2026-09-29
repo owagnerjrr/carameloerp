@@ -65,6 +65,7 @@ export async function salesRoutes(app: FastifyInstance, db: Database) {
       warehouses: await db.warehouse.findMany({
         where: {
           companyId: a.companyId,
+          kind: "STANDARD",
           ...(a.branchId ? { branchId: a.branchId } : {}),
         },
         include: { branch: true },

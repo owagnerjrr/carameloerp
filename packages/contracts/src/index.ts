@@ -3,7 +3,12 @@ import { bookFields, isbn10to13 } from "./books.js";
 export * from "./books.js";
 export * from "./sales.js";
 export * from "./operations.js";
+export * from "./events.js";
 export const permissions = [
+  "events:read",
+  "events:create",
+  "events:manage",
+  "events:stock",
   "dashboard:read",
   "customers:read",
   "customers:write",
@@ -27,6 +32,10 @@ export type PermissionCode = (typeof permissions)[number];
 export const rolePermissions: Record<string, readonly PermissionCode[]> = {
   Administrador: permissions,
   Gerente: [
+    "events:read",
+    "events:create",
+    "events:manage",
+    "events:stock",
     "cash:read",
     "cash:operate",
     "cash:manage",
@@ -58,6 +67,8 @@ export const rolePermissions: Record<string, readonly PermissionCode[]> = {
     "sales:discount",
   ],
   Estoque: [
+    "events:read",
+    "events:stock",
     "products:read",
     "products:write",
     "stock:read",

@@ -1,3 +1,4 @@
+import { eventRoutes } from "./modules/events.js";
 import { operationRoutes } from "./modules/operations.js";
 import Fastify from "fastify";
 import cookie from "@fastify/cookie";
@@ -137,5 +138,6 @@ export async function buildApp(options: AppOptions) {
   await stockRoutes(app, options.db);
   await salesRoutes(app, options.db);
   await operationRoutes(app, options.db);
+  await eventRoutes(app, options.db);
   return app;
 }

@@ -128,7 +128,7 @@ export async function dashboardRoutes(app: FastifyInstance, db: Database) {
           quantity: Prisma.Decimal;
           minStock: Prisma.Decimal;
         }>
-      >`SELECT p.id,p.description,p.code,p."minStock",COALESCE(SUM(b.quantity),0) AS quantity FROM "Product" p LEFT JOIN "StockBalance" b ON b."companyId"=p."companyId" AND b."productId"=p.id WHERE p."companyId"=${companyId}::uuid AND p.active=true GROUP BY p.id HAVING COALESCE(SUM(b.quantity),0)<=p."minStock" ORDER BY COALESCE(SUM(b.quantity),0) LIMIT 5`,
+      >`SELECT p.id,p.description,p.code,p."minStock",COALESCE(SUM(b.quantity),0) AS quantity FROM "Product" p LEFT JOIN "StockBalance" b ON b."companyId"=p."companyId" AND b."productId"=p.id AND EXISTS (SELECT 1 FROM "Warehouse" w WHERE w.id=b."warehouseId" AND w."companyId"=b."companyId" AND w.kind='STANDARD') WHERE p."companyId"=${companyId}::uuid AND p.active=true GROUP BY p.id HAVING COALESCE(SUM(b.quantity),0)<=p."minStock" ORDER BY COALESCE(SUM(b.quantity),0) LIMIT 5`,
       db.$queryRaw<
         Array<{
           id: string;

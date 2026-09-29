@@ -234,3 +234,7 @@ Tenant é obtido da sessão, nunca do corpo da requisição. Consultas filtram `
 A política de perfis está definida no código e persistida por empresa. Há seleção de perfil por usuário; editor de permissões customizadas não está incluído. Administradores não podem anexar silenciosamente uma identidade de outra empresa: convites e aceite do usuário ficam para a evolução SaaS. Estoque é somente leitura nos cadastros; margem é `(preço - custo) / preço`, com zero quando o preço for zero.
 
 As contas a pagar/receber compartilham o modelo `FinancialEntry`, diferenciadas por tipo; isso evita duplicação. O PDV cria recebíveis e parcelas reais de cartão; gestão financeira independente, baixas, recorrência e conciliação pertencem às fases futuras. Campos fiscais são apenas cadastro; não constituem cálculo tributário ou emissão homologada.
+
+## Feiras / Eventos — bloco 1
+
+Cadastro, envio com trânsito rastreável, conferência com divergências, retorno parcial e encerramento operacional. Reutiliza estoque existente; não inclui venda/caixa no evento. Guia: [docs/EVENTOS.md](docs/EVENTOS.md).

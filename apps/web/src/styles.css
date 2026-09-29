@@ -1858,3 +1858,73 @@ textarea {
     flex: 1;
   }
 }
+.event-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.event-metrics .panel {
+  padding: 16px;
+}
+.events-page fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+/* Event operations keep long document tables inside their own scroll area. */
+.events-page {
+  min-width: 0;
+}
+.events-page .toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0;
+}
+.events-page .panel {
+  background: white;
+  border: 1px solid #e3e7dc;
+  border-radius: 14px;
+  padding: 20px;
+  margin: 14px 0;
+  min-width: 0;
+}
+.events-page .panel.table-wrap {
+  padding: 0;
+}
+.events-page .panel p {
+  overflow-wrap: anywhere;
+}
+.events-page td small {
+  display: block;
+  margin-top: 4px;
+}
+.events-page .modal form,
+.events-page .modal fieldset {
+  display: grid;
+  gap: 16px;
+}
+.events-page .modal input[type="number"] {
+  min-width: 90px;
+  max-width: 120px;
+}
+.events-page .event-metrics .panel {
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .events-page .page-heading {
+    align-items: stretch;
+    gap: 12px;
+  }
+  .events-page .toolbar > button {
+    flex: 1 1 auto;
+  }
+  .events-page .panel {
+    padding: 14px;
+  }
+  .events-page h2 {
+    overflow-wrap: anywhere;
+  }
+}

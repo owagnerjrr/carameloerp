@@ -22,6 +22,7 @@ export async function stockRoutes(app: FastifyInstance, db: Database) {
       warehouses: await db.warehouse.findMany({
         where: {
           companyId: a.companyId,
+          kind: "STANDARD",
           ...(a.branchId ? { branchId: a.branchId } : {}),
         },
         include: { branch: true },
@@ -74,7 +75,7 @@ export async function stockRoutes(app: FastifyInstance, db: Database) {
   COUNT(*) OVER()::int AS "resultCount"
   FROM "Product" p CROSS JOIN "Warehouse" w JOIN "Branch" b ON b.id=w."branchId" AND b."companyId"=w."companyId"
   LEFT JOIN "StockBalance" s ON s."companyId"=p."companyId" AND s."productId"=p.id AND s."warehouseId"=w.id
-  WHERE p."companyId"=${a.companyId}::uuid AND w."companyId"=p."companyId"
+  WHERE p."companyId"=${a.companyId}::uuid AND w."companyId"=p."companyId" AND w.kind='STANDARD'
   ${a.branchId ? Prisma.sql`AND b.id=${a.branchId}::uuid` : Prisma.empty}
   ${f.branchId ? Prisma.sql`AND b.id=${f.branchId}::uuid` : Prisma.empty}
   ${f.productId ? Prisma.sql`AND p.id=${f.productId}::uuid` : Prisma.empty}
@@ -100,6 +101,7 @@ export async function stockRoutes(app: FastifyInstance, db: Database) {
     const warehouses = await db.warehouse.findMany({
       where: {
         companyId: a.companyId,
+        kind: "STANDARD",
         ...(a.branchId ? { branchId: a.branchId } : {}),
       },
       include: { branch: true, balances: { where: { productId: id } } },

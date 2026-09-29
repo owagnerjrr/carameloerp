@@ -103,7 +103,14 @@ export async function catalogRoutes(app: FastifyInstance, db: Database) {
         include: {
           category: true,
           supplier: true,
-          balances: { where: branchId ? { warehouse: { branchId } } : {} },
+          balances: {
+            where: {
+              warehouse: {
+                kind: "STANDARD",
+                ...(branchId ? { branchId } : {}),
+              },
+            },
+          },
         },
         orderBy: { description: "asc" },
         skip: (page - 1) * limit,
