@@ -49,3 +49,7 @@ Provisionamento e onboarding, planos/limites, assinatura/cobrança, uso, isolame
 ## Feiras / Eventos — bloco 1
 
 Cadastro, envio com trânsito rastreável, conferência com divergências, retorno parcial e encerramento operacional. Reutiliza estoque existente; não inclui venda/caixa no evento. Guia: [EVENTOS.md](EVENTOS.md).
+
+## Compras e fornecedores
+
+Pedido, aprovação, recebimento parcial, scanner, divergências, custo médio, auditoria e reposição inicial: [COMPRAS.md](COMPRAS.md). Evoluções futuras: devolução ao fornecedor, contas a pagar integradas, importação fiscal/XML, integração com editoras e reposição considerando pedidos pendentes. Essas integrações não fazem parte deste bloco.

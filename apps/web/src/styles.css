@@ -1928,3 +1928,77 @@ textarea {
     overflow-wrap: anywhere;
   }
 }
+.purchases-page {
+  min-width: 0;
+}
+.purchases-page .purchase-toolbar,
+.purchase-actions,
+.purchase-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin: 16px 0;
+}
+.purchase-toolbar label {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.purchases-page fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.purchases-page .table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.purchases-page table input {
+  min-width: 90px;
+  width: 100%;
+}
+.purchases-page td small {
+  display: block;
+  color: var(--muted);
+}
+.purchase-results {
+  display: grid;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+}
+.purchase-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+.purchase-metrics button {
+  text-align: left;
+  white-space: normal;
+}
+.purchase-metrics strong {
+  display: block;
+  font-size: 22px;
+}
+.purchase-divergence {
+  border-top: 1px solid #ddd;
+  padding: 16px 0;
+}
+.purchase-tabs .active {
+  background: #ffe4be;
+  color: #492a0d;
+}
+@media (max-width: 640px) {
+  .purchase-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .purchases-page .section-heading {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .purchases-page .modal .form-grid {
+    grid-template-columns: 1fr;
+  }
+}

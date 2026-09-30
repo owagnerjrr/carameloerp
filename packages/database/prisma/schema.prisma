@@ -7,6 +7,7 @@ datasource db {
 }
 
 model Company {
+  purchaseOrders PurchaseOrder[]
   events Event[]
 
   creditMovements CustomerCreditMovement[]
@@ -35,6 +36,7 @@ model Company {
   auditLogs AuditLog[]
 }
 model Branch {
+  purchaseOrders PurchaseOrder[]
   events Event[]
 
   cashSessions CashSession[]
@@ -83,6 +85,10 @@ model RolePermission {
   @@id([roleId,permissionCode])
 }
 model Membership {
+  purchasesCreated PurchaseOrder[] @relation("PurchaseCreator")
+  purchasesAssigned PurchaseOrder[] @relation("PurchaseBuyer")
+  purchasesApproved PurchaseOrder[] @relation("PurchaseApprover")
+  purchaseActions PurchaseAction[]
   responsibleEvents Event[]
   eventDocuments EventDocument[]
 
@@ -155,6 +161,15 @@ model Customer {
   @@index([companyId,createdAt])
 }
 model Supplier {
+  purchaseOrders PurchaseOrder[]
+  tradeName String?
+  type String @default("OTHER")
+  website String?
+  contact String?
+  deliveryDays Int?
+  paymentTerms String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   stockDocuments StockDocument[]
   id String @id @default(uuid()) @db.Uuid
   companyId String @db.Uuid
@@ -189,6 +204,8 @@ model Category {
   @@unique([companyId,name])
 }
 model Product {
+  purchaseItems PurchaseOrderItem[]
+  purchaseDivergences PurchaseDivergence[]
   eventItems EventDocumentItem[]
 
   stockDocumentItems StockDocumentItem[]
@@ -543,6 +560,7 @@ model ProductIdentifier {
  @@index([companyId,productId])
 }
 model StockDocument {
+ purchaseReceipt PurchaseReceipt?
  id String @id @default(uuid()) @db.Uuid
  companyId String @db.Uuid
  warehouseId String @db.Uuid
@@ -777,4 +795,125 @@ model EventDocumentItem {
  document EventDocument @relation(fields:[companyId,documentId],references:[companyId,id])
  product Product @relation(fields:[companyId,productId],references:[companyId,id])
  @@unique([companyId,documentId,productId])
+}
+
+model PurchaseOrder {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ branchId String @db.Uuid
+ supplierId String @db.Uuid
+ buyerId String @db.Uuid
+ createdById String @db.Uuid
+ approvedById String? @db.Uuid
+ number Int
+ status String @default("DRAFT")
+ orderedAt DateTime @db.Date
+ expectedAt DateTime? @db.Date
+ approvedAt DateTime?
+ sentAt DateTime?
+ cancelledAt DateTime?
+ cancelReason String?
+ notes String?
+ subtotal Decimal @db.Decimal(14,2)
+ discount Decimal @db.Decimal(14,2)
+ freight Decimal @db.Decimal(14,2)
+ expenses Decimal @db.Decimal(14,2)
+ total Decimal @db.Decimal(14,2)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ company Company @relation(fields:[companyId],references:[id])
+ branch Branch @relation(fields:[companyId,branchId],references:[companyId,id])
+ supplier Supplier @relation(fields:[companyId,supplierId],references:[companyId,id])
+ buyer Membership @relation("PurchaseBuyer",fields:[companyId,buyerId],references:[companyId,id])
+ createdBy Membership @relation("PurchaseCreator",fields:[companyId,createdById],references:[companyId,id])
+ approvedBy Membership? @relation("PurchaseApprover",fields:[companyId,approvedById],references:[companyId,id])
+ items PurchaseOrderItem[]
+ receipts PurchaseReceipt[]
+ actions PurchaseAction[]
+ @@unique([companyId,id])
+ @@unique([companyId,number])
+ @@index([companyId,branchId,status,orderedAt])
+ @@index([companyId,supplierId])
+}
+model PurchaseOrderItem {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ orderId String @db.Uuid
+ productId String @db.Uuid
+ title String
+ isbn String?
+ author String?
+ publisher String?
+ quantity Int
+ receivedQuantity Int @default(0)
+ unitCost Decimal @db.Decimal(14,2)
+ unitDiscount Decimal @default(0) @db.Decimal(14,2)
+ subtotal Decimal @db.Decimal(14,2)
+ order PurchaseOrder @relation(fields:[companyId,orderId],references:[companyId,id])
+ product Product @relation(fields:[companyId,productId],references:[companyId,id])
+ receipts PurchaseReceiptItem[]
+ @@unique([companyId,id])
+ @@unique([companyId,orderId,productId])
+}
+model PurchaseReceipt {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ orderId String @db.Uuid
+ documentId String @db.Uuid
+ freight Decimal @db.Decimal(14,2)
+ expenses Decimal @db.Decimal(14,2)
+ total Decimal @db.Decimal(14,2)
+ excessReason String?
+ createdAt DateTime @default(now())
+ order PurchaseOrder @relation(fields:[companyId,orderId],references:[companyId,id])
+ document StockDocument @relation(fields:[companyId,documentId],references:[companyId,id])
+ items PurchaseReceiptItem[]
+ divergences PurchaseDivergence[]
+ @@unique([companyId,id])
+ @@unique([companyId,documentId])
+ @@index([companyId,orderId,createdAt])
+}
+model PurchaseReceiptItem {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ receiptId String @db.Uuid
+ orderItemId String @db.Uuid
+ quantity Int
+ unitCost Decimal @db.Decimal(14,2)
+ allocatedCharges Decimal @db.Decimal(14,2)
+ total Decimal @db.Decimal(14,2)
+ previousCost Decimal @db.Decimal(14,2)
+ resultingCost Decimal @db.Decimal(14,2)
+ receipt PurchaseReceipt @relation(fields:[companyId,receiptId],references:[companyId,id])
+ orderItem PurchaseOrderItem @relation(fields:[companyId,orderItemId],references:[companyId,id])
+ @@unique([companyId,receiptId,orderItemId])
+ @@index([companyId,orderItemId])
+}
+model PurchaseDivergence {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ receiptId String @db.Uuid
+ productId String @db.Uuid
+ type String
+ quantity Int
+ notes String
+ receipt PurchaseReceipt @relation(fields:[companyId,receiptId],references:[companyId,id])
+ product Product @relation(fields:[companyId,productId],references:[companyId,id])
+ @@index([companyId,receiptId])
+}
+model PurchaseAction {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ orderId String @db.Uuid
+ actorId String @db.Uuid
+ kind String
+ notes String?
+ requestKey String @db.Uuid
+ requestHash String
+ result Json
+ createdAt DateTime @default(now())
+ order PurchaseOrder @relation(fields:[companyId,orderId],references:[companyId,id])
+ actor Membership @relation(fields:[companyId,actorId],references:[companyId,id])
+ @@unique([companyId,requestKey])
+ @@index([companyId,orderId,createdAt])
 }

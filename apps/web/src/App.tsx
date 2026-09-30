@@ -47,7 +47,16 @@ const ReturnsPage = lazy(() =>
 const EventsPage = lazy(() =>
   import("./pages/Events").then((m) => ({ default: m.EventsPage })),
 );
+const PurchasesPage = lazy(() =>
+  import("./pages/Purchases").then((m) => ({ default: m.PurchasesPage })),
+);
 const pages = [
+  {
+    id: "purchases",
+    label: "Compras",
+    icon: ShoppingBag,
+    permission: "purchases:read",
+  },
   {
     id: "events",
     label: "Feiras / Eventos",
@@ -196,6 +205,7 @@ export function App() {
                   "cash",
                   "returns",
                   "events",
+                  "purchases",
                 ].includes(p.id) && auth.permissions.includes(p.permission),
             )
             .map((p) => (
@@ -325,6 +335,8 @@ export function App() {
               <ReturnsPage auth={auth} />
             ) : page === "sales" ? (
               <SalesPage auth={auth} />
+            ) : page === "purchases" ? (
+              <PurchasesPage auth={auth} />
             ) : page === "events" ? (
               <EventsPage auth={auth} />
             ) : page === "stock" ? (

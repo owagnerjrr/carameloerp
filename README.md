@@ -238,3 +238,7 @@ As contas a pagar/receber compartilham o modelo `FinancialEntry`, diferenciadas 
 ## Feiras / Eventos — bloco 1
 
 Cadastro, envio com trânsito rastreável, conferência com divergências, retorno parcial e encerramento operacional. Reutiliza estoque existente; não inclui venda/caixa no evento. Guia: [docs/EVENTOS.md](docs/EVENTOS.md).
+
+## Compras e fornecedores
+
+Cadastro de fornecedores, pedidos com aprovação, recebimento parcial por scanner, divergências, custo médio e sugestões de reposição por filial. Recebimentos reutilizam o estoque transacional e mantêm histórico de custos. Guia, permissões, atalhos e limitações: [docs/COMPRAS.md](docs/COMPRAS.md). Aplique as migrations antes de iniciar a versão atual.

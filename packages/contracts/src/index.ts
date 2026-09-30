@@ -4,7 +4,17 @@ export * from "./books.js";
 export * from "./sales.js";
 export * from "./operations.js";
 export * from "./events.js";
+export * from "./purchases.js";
 export const permissions = [
+  "purchases:read",
+  "purchases:create",
+  "purchases:edit",
+  "purchases:approve",
+  "purchases:receive",
+  "purchases:cancel",
+  "purchases:excess",
+  "suppliers:read",
+  "suppliers:write",
   "events:read",
   "events:create",
   "events:manage",
@@ -32,6 +42,15 @@ export type PermissionCode = (typeof permissions)[number];
 export const rolePermissions: Record<string, readonly PermissionCode[]> = {
   Administrador: permissions,
   Gerente: [
+    "purchases:read",
+    "purchases:create",
+    "purchases:edit",
+    "purchases:approve",
+    "purchases:receive",
+    "purchases:cancel",
+    "purchases:excess",
+    "suppliers:read",
+    "suppliers:write",
     "events:read",
     "events:create",
     "events:manage",
@@ -67,6 +86,9 @@ export const rolePermissions: Record<string, readonly PermissionCode[]> = {
     "sales:discount",
   ],
   Estoque: [
+    "purchases:read",
+    "purchases:receive",
+    "suppliers:read",
     "events:read",
     "events:stock",
     "products:read",
@@ -167,6 +189,19 @@ export const customerSchema = z
     active: z.boolean().default(true),
   })
   .strict();
+export const supplierSchema = customerSchema.extend({
+  tradeName: optionalText(160),
+  type: z
+    .enum(["PUBLISHER", "DISTRIBUTOR", "WHOLESALER", "OTHER"])
+    .default("OTHER"),
+  website: optionalText(300).refine(
+    (v) => !v || /^https?:\/\/[^\s]+$/.test(v),
+    "Informe URL http/https",
+  ),
+  contact: optionalText(160),
+  deliveryDays: z.number().int().min(0).max(3650).nullable().optional(),
+  paymentTerms: optionalText(300),
+});
 const money = z
   .string()
   .regex(
