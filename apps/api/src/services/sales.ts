@@ -1,3 +1,4 @@
+import { reverseReceivables } from "./receivables.js";
 import { restoreCredits } from "./credits.js";
 import { openSessionFor, cashSummary } from "./cash.js";
 import { validatePayments, recordPayments } from "./payments.js";
@@ -263,10 +264,7 @@ export async function cancelSale(
         where: { companyId: a.companyId, saleId: sale.id },
         data: { reversedAt: now },
       });
-      await tx.financialEntry.updateMany({
-        where: { companyId: a.companyId, saleId: sale.id },
-        data: { status: "CANCELLED", settledAt: null },
-      });
+      await reverseReceivables(tx, a, sale.id, now);
       for (const movement of sale.cashMovements.filter(
         (m) => m.kind === "RECEIPT",
       ))

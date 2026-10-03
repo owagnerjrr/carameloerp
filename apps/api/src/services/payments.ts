@@ -1,3 +1,4 @@
+import { receivableAudit } from "./receivables.js";
 import { redeemCredits } from "./credits.js";
 import { cents, reais, splitCents, type Checkout } from "@caramelo/contracts";
 import type { CashSession, Sale } from "@caramelo/database";
@@ -90,7 +91,7 @@ export async function recordPayments(
           ? dueMonth(day, i + 1)
           : new Date(day + "T00:00:00Z");
       if (p.method === "DEBIT_CARD") due.setUTCDate(due.getUTCDate() + 1);
-      await tx.financialEntry.create({
+      const entry = await tx.financialEntry.create({
         data: {
           companyId: a.companyId,
           branchId: sale.branchId,
@@ -107,6 +108,24 @@ export async function recordPayments(
           installment: i + 1,
         },
       });
+      await receivableAudit(tx, a, "RECEIVABLE_CREATED", entry, {
+        amount: reais(value),
+        installment: i + 1,
+        immediate,
+      });
+      if (immediate)
+        await tx.financialSettlement.create({
+          data: {
+            companyId: a.companyId,
+            entryId: entry.id,
+            actorId: a.membershipId,
+            kind: "RECEIPT",
+            sourceKey: `sale:${entry.id}`,
+            amount: reais(value),
+            paidAt: new Date(day),
+            method: p.method,
+          },
+        });
     }
     {
       await tx.cashMovement.create({

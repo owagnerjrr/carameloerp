@@ -28,7 +28,7 @@ Pendentes: orçamento e pedido operacionais, boleto/crediário/outras formas e i
 
 ## FASE 5 — Financeiro
 
-Caixa operacional e conferência entregues. Contas a pagar e confirmação financeira de recebimentos entregues: [FINANCEIRO-CONTAS-PAGAR.md](FINANCEIRO-CONTAS-PAGAR.md). Evoluir contas a receber, recorrência, centros de custo e contas bancárias. Fluxo previsto/realizado, vencidos/futuros, conciliação e fechamentos.
+Caixa operacional e conferência entregues. Contas a pagar e confirmação financeira de recebimentos entregues: [FINANCEIRO-CONTAS-PAGAR.md](FINANCEIRO-CONTAS-PAGAR.md). Contas a receber, baixas e fluxo diário previsto/realizado entregues: [FINANCEIRO-CONTAS-RECEBER.md](FINANCEIRO-CONTAS-RECEBER.md). Evoluir recorrência, centros de custo, contas bancárias, taxas/antecipação, conciliação externa e fechamentos.
 
 ## FASE 6 — Relatórios
 

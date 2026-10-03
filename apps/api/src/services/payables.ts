@@ -122,7 +122,10 @@ export async function payableCommand(
       include: { obligation: true },
     });
     if (previous) {
-      if (a.branchId && previous.obligation.branchId !== a.branchId)
+      if (
+        !previous.obligation ||
+        (a.branchId && previous.obligation.branchId !== a.branchId)
+      )
         throw new HttpError(404, "Conta indisponível.");
       if (previous.requestHash !== hash)
         throw new HttpError(409, "Chave já utilizada com outro conteúdo.");

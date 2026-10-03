@@ -50,8 +50,8 @@ const EventsPage = lazy(() =>
 const PurchasesPage = lazy(() =>
   import("./pages/Purchases").then((m) => ({ default: m.PurchasesPage })),
 );
-const PayablesPage = lazy(() =>
-  import("./pages/Payables").then((m) => ({ default: m.PayablesPage })),
+const FinancePage = lazy(() =>
+  import("./pages/Finance").then((m) => ({ default: m.FinancePage })),
 );
 const pages = [
   {
@@ -146,9 +146,20 @@ export function App() {
       setPage(
         (current) =>
           pages.find(
-            (p) => p.id === current && user.permissions.includes(p.permission),
+            (p) =>
+              p.id === current &&
+              (user.permissions.includes(p.permission) ||
+                (p.id === "payables" &&
+                  (user.permissions.includes("receivables:read") ||
+                    user.permissions.includes("finance:read")))),
           )?.id ??
-          pages.find((p) => user.permissions.includes(p.permission))?.id ??
+          pages.find(
+            (p) =>
+              user.permissions.includes(p.permission) ||
+              (p.id === "payables" &&
+                (user.permissions.includes("receivables:read") ||
+                  user.permissions.includes("finance:read"))),
+          )?.id ??
           "",
       );
     } catch {
@@ -220,7 +231,11 @@ export function App() {
                   "events",
                   "purchases",
                   "payables",
-                ].includes(p.id) && auth.permissions.includes(p.permission),
+                ].includes(p.id) &&
+                (auth.permissions.includes(p.permission) ||
+                  (p.id === "payables" &&
+                    (auth.permissions.includes("receivables:read") ||
+                      auth.permissions.includes("finance:read")))),
             )
             .map((p) => (
               <button
@@ -255,7 +270,10 @@ export function App() {
         {pages.some(
           (p) =>
             ["users", "audit"].includes(p.id) &&
-            auth.permissions.includes(p.permission),
+            (auth.permissions.includes(p.permission) ||
+              (p.id === "payables" &&
+                (auth.permissions.includes("receivables:read") ||
+                  auth.permissions.includes("finance:read")))),
         ) && (
           <>
             <span className="nav-label">ADMINISTRAÇÃO</span>
@@ -264,7 +282,10 @@ export function App() {
                 .filter(
                   (p) =>
                     ["users", "audit"].includes(p.id) &&
-                    auth.permissions.includes(p.permission),
+                    (auth.permissions.includes(p.permission) ||
+                      (p.id === "payables" &&
+                        (auth.permissions.includes("receivables:read") ||
+                          auth.permissions.includes("finance:read")))),
                 )
                 .map((p) => (
                   <button
@@ -358,7 +379,7 @@ export function App() {
                 }}
               />
             ) : page === "payables" ? (
-              <PayablesPage
+              <FinancePage
                 auth={auth}
                 initialPurchaseId={financeLink}
                 onPurchase={(id) => {

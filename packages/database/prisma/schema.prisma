@@ -450,6 +450,10 @@ enum EntryStatus {
   CANCELLED
 }
 model FinancialEntry {
+  actions FinancialAction[]
+  expectedDate DateTime? @db.Date
+  notes String?
+  externalReference String?
   obligationId String? @db.Uuid
   obligation FinancialObligation? @relation(fields:[companyId,obligationId],references:[companyId,id])
   interest Decimal @default(0) @db.Decimal(14,2)
@@ -979,6 +983,14 @@ model FinancialObligation {
  @@index([companyId,categoryId])
 }
 model FinancialSettlement {
+ kind String @default("PAYMENT")
+ sourceKey String?
+ originalSettlementId String? @db.Uuid
+ originalSettlement FinancialSettlement? @relation("SettlementReversal",fields:[companyId,originalSettlementId],references:[companyId,id],onDelete:Restrict,onUpdate:NoAction)
+ reversal FinancialSettlement[] @relation("SettlementReversal")
+ @@unique([companyId,id])
+ @@unique([companyId,sourceKey])
+ @@unique([companyId,originalSettlementId])
  id String @id @default(uuid()) @db.Uuid
  companyId String @db.Uuid
  entryId String @db.Uuid
@@ -995,16 +1007,19 @@ model FinancialSettlement {
  @@index([companyId,entryId])
 }
 model FinancialAction {
+ entryId String? @db.Uuid
+ entry FinancialEntry? @relation(fields:[companyId,entryId],references:[companyId,id],onDelete:Restrict)
+ @@index([companyId,entryId,createdAt])
  id String @id @default(uuid()) @db.Uuid
  companyId String @db.Uuid
- obligationId String @db.Uuid
+ obligationId String? @db.Uuid
  actorId String @db.Uuid
  kind String
  requestKey String @db.Uuid
  requestHash String
  result Json
  createdAt DateTime @default(now())
- obligation FinancialObligation @relation(fields:[companyId,obligationId],references:[companyId,id])
+ obligation FinancialObligation? @relation(fields:[companyId,obligationId],references:[companyId,id],onDelete:Restrict)
  actor Membership @relation(fields:[companyId,actorId],references:[companyId,id])
  @@unique([companyId,requestKey])
  @@index([companyId,obligationId,createdAt])

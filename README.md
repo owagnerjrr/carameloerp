@@ -233,7 +233,7 @@ Tenant é obtido da sessão, nunca do corpo da requisição. Consultas filtram `
 
 A política de perfis está definida no código e persistida por empresa. Há seleção de perfil por usuário; editor de permissões customizadas não está incluído. Administradores não podem anexar silenciosamente uma identidade de outra empresa: convites e aceite do usuário ficam para a evolução SaaS. Estoque é somente leitura nos cadastros; margem é `(preço - custo) / preço`, com zero quando o preço for zero.
 
-As contas a pagar/receber compartilham o modelo `FinancialEntry`, diferenciadas por tipo; isso evita duplicação. O PDV cria recebíveis e parcelas reais de cartão; gestão financeira independente, baixas, recorrência e conciliação pertencem às fases futuras. Campos fiscais são apenas cadastro; não constituem cálculo tributário ou emissão homologada.
+As contas a pagar/receber compartilham o modelo `FinancialEntry`, diferenciadas por tipo; isso evita duplicação. O PDV cria recebíveis e parcelas reais de cartão; baixas administrativas e fluxo consolidado estão disponíveis. Recorrência e conciliação externa permanecem futuras. Campos fiscais são apenas cadastro; não constituem cálculo tributário ou emissão homologada.
 
 ## Feiras / Eventos — bloco 1
 
@@ -246,3 +246,7 @@ Cadastro de fornecedores, pedidos com aprovação, recebimento parcial por scann
 ## Financeiro — Contas a Pagar
 
 Entregue e validado: despesas manuais, confirmação financeira explícita de recebimentos, parcelas, pagamentos parciais, ajustes, auditoria, consultas e CSV. Política e limites em [docs/FINANCEIRO-CONTAS-PAGAR.md](docs/FINANCEIRO-CONTAS-PAGAR.md). Não executa pagamentos bancários nem movimenta automaticamente o caixa do PDV.
+
+## Financeiro — Contas a Receber e fluxo consolidado
+
+Recebíveis do PDV, baixas totais/parciais, previsão, reversão administrativa no cancelamento e visão diária de realizado versus previsto, integrada a Contas a Pagar. Guia de políticas, permissões, migration e limites: [docs/FINANCEIRO-CONTAS-RECEBER.md](docs/FINANCEIRO-CONTAS-RECEBER.md). Aplique `npm run db:migrate` e `npm run test:db` antes de validar a versão.
