@@ -1,3 +1,4 @@
+export * from "./payables.js";
 import { z } from "zod";
 import { bookFields, isbn10to13 } from "./books.js";
 export * from "./books.js";
@@ -6,6 +7,11 @@ export * from "./operations.js";
 export * from "./events.js";
 export * from "./purchases.js";
 export const permissions = [
+  "payables:read",
+  "payables:create",
+  "payables:edit",
+  "payables:pay",
+  "payables:cancel",
   "purchases:read",
   "purchases:create",
   "purchases:edit",
@@ -42,6 +48,11 @@ export type PermissionCode = (typeof permissions)[number];
 export const rolePermissions: Record<string, readonly PermissionCode[]> = {
   Administrador: permissions,
   Gerente: [
+    "payables:read",
+    "payables:create",
+    "payables:edit",
+    "payables:pay",
+    "payables:cancel",
     "purchases:read",
     "purchases:create",
     "purchases:edit",
@@ -73,7 +84,16 @@ export const rolePermissions: Record<string, readonly PermissionCode[]> = {
     "products:write",
     "audit:read",
   ],
-  Financeiro: ["dashboard:read", "customers:read", "cash:read"],
+  Financeiro: [
+    "payables:read",
+    "payables:create",
+    "payables:edit",
+    "payables:pay",
+    "payables:cancel",
+    "dashboard:read",
+    "customers:read",
+    "cash:read",
+  ],
   Vendedor: [
     "cash:read",
     "cash:operate",

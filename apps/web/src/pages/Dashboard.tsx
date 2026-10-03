@@ -22,6 +22,12 @@ import {
 import { api, money, number, type Auth } from "../api";
 import { Empty, Loading, ErrorMessage } from "../components";
 interface DashboardData {
+  payableIndicators: {
+    open: string;
+    overdue: string;
+    next7: string;
+    paidMonth: string;
+  } | null;
   revenue: string;
   grossRevenue: string;
   returnsAmount: string;
@@ -123,6 +129,29 @@ export function Dashboard({
           </button>
         )}
       </div>
+      {data?.payableIndicators && (
+        <section
+          aria-label="Financeiro de fornecedores e despesas"
+          className="payable-indicators"
+        >
+          {(
+            [
+              ["open", "Contas a pagar"],
+              ["overdue", "Vencidas"],
+              ["next7", "Vencendo em 7 dias"],
+              ["paidMonth", "Pago no mês"],
+            ] as const
+          ).map(([k, l]) => (
+            <div key={k} className="panel">
+              <span>{l}</span>
+              <strong>{money(data.payableIndicators![k])}</strong>
+            </div>
+          ))}
+          <button onClick={() => navigate("payables")}>
+            Abrir Contas a Pagar
+          </button>
+        </section>
+      )}
       <div className="period-bar">
         <div className="period-tabs" aria-label="Período do dashboard">
           {[

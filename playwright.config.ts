@@ -9,6 +9,7 @@ export default defineConfig({
     "credits.browser.spec.ts",
     "events.browser.spec.ts",
     "purchases.browser.spec.ts",
+    "payables.browser.spec.ts",
   ],
   workers: 1,
   reporter: "list",

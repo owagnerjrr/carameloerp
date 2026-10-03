@@ -50,7 +50,16 @@ const EventsPage = lazy(() =>
 const PurchasesPage = lazy(() =>
   import("./pages/Purchases").then((m) => ({ default: m.PurchasesPage })),
 );
+const PayablesPage = lazy(() =>
+  import("./pages/Payables").then((m) => ({ default: m.PayablesPage })),
+);
 const pages = [
+  {
+    id: "payables",
+    label: "Financeiro",
+    icon: Wallet,
+    permission: "payables:read",
+  },
   {
     id: "purchases",
     label: "Compras",
@@ -124,6 +133,8 @@ export function Brand() {
 export function App() {
   const [auth, setAuth] = useState<Auth | null>(null);
   const [loading, setLoading] = useState(true);
+  const [purchaseLink, setPurchaseLink] = useState<string | undefined>();
+  const [financeLink, setFinanceLink] = useState<string | undefined>();
   const [page, setPage] = useState("dashboard");
   const [collapsed, setCollapsed] = useState(false);
   const [mobile, setMobile] = useState(false);
@@ -167,6 +178,8 @@ export function App() {
   if (loading) return <Loading />;
   if (!auth) return <Login onLogin={load} sessionMessage={error} />;
   const navigate = (id: string) => {
+    setPurchaseLink(undefined);
+    setFinanceLink(undefined);
     setPage(id);
     setMobile(false);
     setError("");
@@ -206,6 +219,7 @@ export function App() {
                   "returns",
                   "events",
                   "purchases",
+                  "payables",
                 ].includes(p.id) && auth.permissions.includes(p.permission),
             )
             .map((p) => (
@@ -224,7 +238,6 @@ export function App() {
         <span className="nav-label future-label">PRÓXIMAS ETAPAS</span>
         <div className="future-nav">
           {[
-            { label: "Financeiro", icon: Wallet },
             { label: "Relatórios", icon: ChartNoAxesCombined },
             { label: "Fiscal", icon: FileText },
           ].map((p) => (
@@ -336,7 +349,23 @@ export function App() {
             ) : page === "sales" ? (
               <SalesPage auth={auth} />
             ) : page === "purchases" ? (
-              <PurchasesPage auth={auth} />
+              <PurchasesPage
+                auth={auth}
+                initialId={purchaseLink}
+                onFinance={(id) => {
+                  setFinanceLink(id);
+                  setPage("payables");
+                }}
+              />
+            ) : page === "payables" ? (
+              <PayablesPage
+                auth={auth}
+                initialPurchaseId={financeLink}
+                onPurchase={(id) => {
+                  setPurchaseLink(id);
+                  setPage("purchases");
+                }}
+              />
             ) : page === "events" ? (
               <EventsPage auth={auth} />
             ) : page === "stock" ? (

@@ -1,10 +1,12 @@
+import { payableIndicators } from "./payables.js";
 import type { FastifyInstance } from "fastify";
 import { Prisma, type Database } from "@caramelo/database";
 import { periodSchema } from "@caramelo/contracts";
 import { requirePermission } from "../context.js";
 export async function dashboardRoutes(app: FastifyInstance, db: Database) {
   app.get("/api/dashboard", async (request) => {
-    const { companyId } = requirePermission(request, "dashboard:read");
+    const auth = requirePermission(request, "dashboard:read");
+    const { companyId } = auth;
     const { from, to } = periodSchema.parse(request.query);
     // Commercial dates in America/Sao_Paulo (UTC-03); end is exclusive.
     const start = new Date(`${from}T00:00:00-03:00`);
@@ -98,7 +100,13 @@ export async function dashboardRoutes(app: FastifyInstance, db: Database) {
           status: "OPEN",
           dueDate: { gte: new Date(from), lte: new Date(to) },
         },
-        _sum: { amount: true, settledAmount: true },
+        _sum: {
+          amount: true,
+          settledAmount: true,
+          interest: true,
+          penalty: true,
+          discount: true,
+        },
       }),
       db.cashMovement.aggregate({
         where: {
@@ -167,6 +175,9 @@ export async function dashboardRoutes(app: FastifyInstance, db: Database) {
       });
     }
     return {
+      payableIndicators: auth.permissions.includes("payables:read")
+        ? await payableIndicators(db, auth)
+        : null,
       period: { from, to },
       revenue: new Prisma.Decimal(revenue._sum.total ?? 0)
         .minus(returnsPeriod._sum.returnedAmount ?? 0)
@@ -191,6 +202,9 @@ export async function dashboardRoutes(app: FastifyInstance, db: Database) {
         .minus(receivables._sum.settledAmount ?? 0)
         .toString(),
       payables: new Prisma.Decimal(payables._sum.amount ?? 0)
+        .plus(payables._sum.interest ?? 0)
+        .plus(payables._sum.penalty ?? 0)
+        .minus(payables._sum.discount ?? 0)
         .minus(payables._sum.settledAmount ?? 0)
         .toString(),
       balance: String(cash._sum.amount ?? 0),

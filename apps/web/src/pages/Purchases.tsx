@@ -42,7 +42,15 @@ type CostRow = {
     };
   };
 };
-export function PurchasesPage({ auth }: { auth: Auth }) {
+export function PurchasesPage({
+  auth,
+  initialId,
+  onFinance,
+}: {
+  auth: Auth;
+  initialId?: string;
+  onFinance?: (id: string) => void;
+}) {
   const [options, setOptions] = useState<Options>({
       branches: [],
       warehouses: [],
@@ -114,6 +122,9 @@ export function PurchasesPage({ auth }: { auth: Auth }) {
     setDetail(await api<Purchase>("/purchases/" + id));
     setError("");
   }
+  useEffect(() => {
+    if (initialId) void open(initialId).catch((e) => setError(e.message));
+  }, [initialId]);
   async function reload(id: string) {
     await open(id);
     setEditing(null);
@@ -262,6 +273,11 @@ export function PurchasesPage({ auth }: { auth: Auth }) {
               </p>
             </div>
             <div className="purchase-actions">
+              {auth.permissions.includes("payables:read") && onFinance && (
+                <button onClick={() => onFinance(detail.id)}>
+                  Contas a pagar da compra
+                </button>
+              )}
               {detail.status === "DRAFT" && can("edit") && (
                 <>
                   <button onClick={() => setEditing({ order: detail })}>

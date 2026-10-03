@@ -96,6 +96,11 @@ export async function stockFixture(db: Database) {
       await db.$transaction(async (tx) => {
         const where = { companyId: company.id };
         await tx.auditLog.deleteMany({ where });
+        await tx.financialSettlement.deleteMany({ where });
+        await tx.financialAction.deleteMany({ where });
+        await tx.financialEntry.deleteMany({ where });
+        await tx.financialObligation.deleteMany({ where });
+        await tx.financialCategory.deleteMany({ where });
         await tx.stockMovement.deleteMany({ where });
         await tx.purchaseDivergence.deleteMany({ where });
         await tx.purchaseReceiptItem.deleteMany({ where });

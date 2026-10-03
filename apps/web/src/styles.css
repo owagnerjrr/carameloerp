@@ -2002,3 +2002,77 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+.payables-page {
+  min-width: 0;
+}
+.payable-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0.8rem 0;
+}
+.payable-indicators {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+.payable-indicators .panel {
+  padding: 1rem;
+  display: grid;
+  gap: 0.5rem;
+}
+.payable-indicators strong {
+  font-size: 1.3rem;
+}
+.payable-filters,
+.payable-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+}
+.payable-filters label,
+.payable-form label {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+}
+.payable-form input,
+.payable-form select,
+.payable-form textarea,
+.payable-filters input,
+.payable-filters select {
+  width: 100%;
+  min-width: 0;
+}
+.payable-form p,
+.payable-form .error,
+.payable-form > button {
+  grid-column: 1/-1;
+}
+.payable-overdue {
+  background: #fff3ed;
+  color: #9a3412;
+}
+.payable-detail {
+  padding: 1rem;
+  overflow-wrap: anywhere;
+}
+.payable-detail pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.payables-page .table-wrap {
+  max-width: 100%;
+  overflow: auto;
+}
+@media (max-width: 600px) {
+  .payable-form,
+  .payable-filters {
+    grid-template-columns: 1fr;
+  }
+  .payable-indicators {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

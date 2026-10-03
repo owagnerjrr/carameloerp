@@ -7,6 +7,8 @@ datasource db {
 }
 
 model Company {
+  financialCategories FinancialCategory[]
+  financialObligations FinancialObligation[]
   purchaseOrders PurchaseOrder[]
   events Event[]
 
@@ -36,6 +38,7 @@ model Company {
   auditLogs AuditLog[]
 }
 model Branch {
+  financialObligations FinancialObligation[]
   purchaseOrders PurchaseOrder[]
   events Event[]
 
@@ -85,6 +88,9 @@ model RolePermission {
   @@id([roleId,permissionCode])
 }
 model Membership {
+  financialSettlements FinancialSettlement[]
+  financialActions FinancialAction[]
+  financialObligations FinancialObligation[]
   purchasesCreated PurchaseOrder[] @relation("PurchaseCreator")
   purchasesAssigned PurchaseOrder[] @relation("PurchaseBuyer")
   purchasesApproved PurchaseOrder[] @relation("PurchaseApprover")
@@ -161,6 +167,7 @@ model Customer {
   @@index([companyId,createdAt])
 }
 model Supplier {
+  financialObligations FinancialObligation[]
   purchaseOrders PurchaseOrder[]
   tradeName String?
   type String @default("OTHER")
@@ -443,6 +450,14 @@ enum EntryStatus {
   CANCELLED
 }
 model FinancialEntry {
+  obligationId String? @db.Uuid
+  obligation FinancialObligation? @relation(fields:[companyId,obligationId],references:[companyId,id])
+  interest Decimal @default(0) @db.Decimal(14,2)
+  penalty Decimal @default(0) @db.Decimal(14,2)
+  discount Decimal @default(0) @db.Decimal(14,2)
+  settlements FinancialSettlement[]
+  @@unique([companyId,obligationId,installment])
+
  settledAmount Decimal @default(0) @db.Decimal(14,2)
   returnId String? @db.Uuid
   returnOperation ReturnOperation? @relation(fields:[companyId,returnId],references:[companyId,id])
@@ -798,6 +813,7 @@ model EventDocumentItem {
 }
 
 model PurchaseOrder {
+  financialObligations FinancialObligation[]
  id String @id @default(uuid()) @db.Uuid
  companyId String @db.Uuid
  branchId String @db.Uuid
@@ -856,6 +872,7 @@ model PurchaseOrderItem {
  @@unique([companyId,orderId,productId])
 }
 model PurchaseReceipt {
+  financialObligations FinancialObligation[]
  id String @id @default(uuid()) @db.Uuid
  companyId String @db.Uuid
  orderId String @db.Uuid
@@ -916,4 +933,79 @@ model PurchaseAction {
  actor Membership @relation(fields:[companyId,actorId],references:[companyId,id])
  @@unique([companyId,requestKey])
  @@index([companyId,orderId,createdAt])
+}
+
+model FinancialCategory {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ name String
+ active Boolean @default(true)
+ company Company @relation(fields:[companyId],references:[id])
+ obligations FinancialObligation[]
+ @@unique([companyId,id])
+ @@unique([companyId,name])
+}
+model FinancialObligation {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ branchId String @db.Uuid
+ supplierId String? @db.Uuid
+ categoryId String @db.Uuid
+ actorId String @db.Uuid
+ purchaseOrderId String? @db.Uuid
+ purchaseReceiptId String? @db.Uuid
+ origin String
+ description String
+ documentNumber String?
+ issuedAt DateTime @db.Date
+ competence DateTime @db.Date
+ notes String?
+ originalAmount Decimal @db.Decimal(14,2)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ company Company @relation(fields:[companyId],references:[id])
+ branch Branch @relation(fields:[companyId,branchId],references:[companyId,id])
+ supplier Supplier? @relation(fields:[companyId,supplierId],references:[companyId,id])
+ category FinancialCategory @relation(fields:[companyId,categoryId],references:[companyId,id])
+ actor Membership @relation(fields:[companyId,actorId],references:[companyId,id])
+ purchaseOrder PurchaseOrder? @relation(fields:[companyId,purchaseOrderId],references:[companyId,id])
+ purchaseReceipt PurchaseReceipt? @relation(fields:[companyId,purchaseReceiptId],references:[companyId,id])
+ entries FinancialEntry[]
+ actions FinancialAction[]
+ @@unique([companyId,id])
+ @@unique([companyId,purchaseReceiptId])
+ @@index([companyId,branchId,issuedAt])
+ @@index([companyId,supplierId])
+ @@index([companyId,categoryId])
+}
+model FinancialSettlement {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ entryId String @db.Uuid
+ actorId String @db.Uuid
+ amount Decimal @db.Decimal(14,2)
+ paidAt DateTime @db.Date
+ method String
+ reference String?
+ notes String?
+ createdAt DateTime @default(now())
+ entry FinancialEntry @relation(fields:[companyId,entryId],references:[companyId,id])
+ actor Membership @relation(fields:[companyId,actorId],references:[companyId,id])
+ @@index([companyId,paidAt])
+ @@index([companyId,entryId])
+}
+model FinancialAction {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ obligationId String @db.Uuid
+ actorId String @db.Uuid
+ kind String
+ requestKey String @db.Uuid
+ requestHash String
+ result Json
+ createdAt DateTime @default(now())
+ obligation FinancialObligation @relation(fields:[companyId,obligationId],references:[companyId,id])
+ actor Membership @relation(fields:[companyId,actorId],references:[companyId,id])
+ @@unique([companyId,requestKey])
+ @@index([companyId,obligationId,createdAt])
 }

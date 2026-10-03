@@ -1,3 +1,4 @@
+import { payableRoutes } from "./modules/payables.js";
 import { eventRoutes } from "./modules/events.js";
 import { purchaseRoutes } from "./modules/purchases.js";
 import { operationRoutes } from "./modules/operations.js";
@@ -141,5 +142,6 @@ export async function buildApp(options: AppOptions) {
   await operationRoutes(app, options.db);
   await eventRoutes(app, options.db);
   await purchaseRoutes(app, options.db);
+  await payableRoutes(app, options.db);
   return app;
 }

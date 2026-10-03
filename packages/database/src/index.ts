@@ -5,4 +5,4 @@ export function createDatabase(url: string) {
 }
 export type Database = ReturnType<typeof createDatabase>;
 export { Prisma } from "./generated/client.js";
-export type { CashSession, Sale } from "./generated/client.js";
+export type { CashSession, Sale, FinancialEntry } from "./generated/client.js";

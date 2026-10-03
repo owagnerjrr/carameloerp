@@ -242,3 +242,7 @@ Cadastro, envio com trânsito rastreável, conferência com divergências, retor
 ## Compras e fornecedores
 
 Cadastro de fornecedores, pedidos com aprovação, recebimento parcial por scanner, divergências, custo médio e sugestões de reposição por filial. Recebimentos reutilizam o estoque transacional e mantêm histórico de custos. Guia, permissões, atalhos e limitações: [docs/COMPRAS.md](docs/COMPRAS.md). Aplique as migrations antes de iniciar a versão atual.
+
+## Financeiro — Contas a Pagar
+
+Entregue e validado: despesas manuais, confirmação financeira explícita de recebimentos, parcelas, pagamentos parciais, ajustes, auditoria, consultas e CSV. Política e limites em [docs/FINANCEIRO-CONTAS-PAGAR.md](docs/FINANCEIRO-CONTAS-PAGAR.md). Não executa pagamentos bancários nem movimenta automaticamente o caixa do PDV.

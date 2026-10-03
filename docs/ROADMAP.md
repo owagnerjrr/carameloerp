@@ -28,7 +28,7 @@ Pendentes: orçamento e pedido operacionais, boleto/crediário/outras formas e i
 
 ## FASE 5 — Financeiro
 
-Caixa operacional e conferência entregues. Evoluir contas a pagar/receber, baixa, parcelamento, recorrência, juros, multa, desconto, categorias, centros de custo, contas bancárias e caixa. Fluxo previsto/realizado, vencidos/futuros, conciliação e fechamentos.
+Caixa operacional e conferência entregues. Contas a pagar e confirmação financeira de recebimentos entregues: [FINANCEIRO-CONTAS-PAGAR.md](FINANCEIRO-CONTAS-PAGAR.md). Evoluir contas a receber, recorrência, centros de custo e contas bancárias. Fluxo previsto/realizado, vencidos/futuros, conciliação e fechamentos.
 
 ## FASE 6 — Relatórios
 
@@ -52,4 +52,4 @@ Cadastro, envio com trânsito rastreável, conferência com divergências, retor
 
 ## Compras e fornecedores
 
-Pedido, aprovação, recebimento parcial, scanner, divergências, custo médio, auditoria e reposição inicial: [COMPRAS.md](COMPRAS.md). Evoluções futuras: devolução ao fornecedor, contas a pagar integradas, importação fiscal/XML, integração com editoras e reposição considerando pedidos pendentes. Essas integrações não fazem parte deste bloco.
+Pedido, aprovação, recebimento parcial, scanner, divergências, custo médio, auditoria e reposição inicial: [COMPRAS.md](COMPRAS.md). Evoluções futuras: devolução ao fornecedor, importação fiscal/XML, integração com editoras e reposição considerando pedidos pendentes. Essas integrações não fazem parte deste bloco.
