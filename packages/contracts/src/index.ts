@@ -1,3 +1,4 @@
+export * from "./transfers.js";
 export * from "./receivables.js";
 export * from "./payables.js";
 import { z } from "zod";
@@ -26,6 +27,12 @@ export const permissions = [
   "purchases:excess",
   "suppliers:read",
   "suppliers:write",
+  "transfers:read",
+  "transfers:create",
+  "transfers:send",
+  "transfers:receive",
+  "transfers:cancel",
+  "transfers:return",
   "events:read",
   "events:create",
   "events:manage",
@@ -71,6 +78,12 @@ export const rolePermissions: Record<string, readonly PermissionCode[]> = {
     "purchases:excess",
     "suppliers:read",
     "suppliers:write",
+    "transfers:read",
+    "transfers:create",
+    "transfers:send",
+    "transfers:receive",
+    "transfers:cancel",
+    "transfers:return",
     "events:read",
     "events:create",
     "events:manage",
@@ -122,6 +135,12 @@ export const rolePermissions: Record<string, readonly PermissionCode[]> = {
     "purchases:read",
     "purchases:receive",
     "suppliers:read",
+    "transfers:read",
+    "transfers:create",
+    "transfers:send",
+    "transfers:receive",
+    "transfers:cancel",
+    "transfers:return",
     "events:read",
     "events:stock",
     "products:read",

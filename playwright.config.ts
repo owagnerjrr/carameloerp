@@ -11,6 +11,7 @@ export default defineConfig({
     "purchases.browser.spec.ts",
     "payables.browser.spec.ts",
     "receivables.browser.spec.ts",
+    "transfers.browser.spec.ts",
   ],
   workers: 1,
   reporter: "list",

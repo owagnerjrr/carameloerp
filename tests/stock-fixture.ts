@@ -126,8 +126,11 @@ export async function stockFixture(db: Database) {
         await tx.cashSession.deleteMany({ where });
         await tx.cashRegister.deleteMany({ where });
         await tx.customer.deleteMany({ where });
+        await tx.transferDivergence.deleteMany({ where });
+        await tx.stockTransferItem.deleteMany({ where });
         await tx.stockDocumentItem.deleteMany({ where });
         await tx.stockDocument.deleteMany({ where });
+        await tx.stockTransfer.deleteMany({ where });
         await tx.stockBalance.deleteMany({ where });
         await tx.productIdentifier.deleteMany({ where });
         await tx.product.deleteMany({ where });

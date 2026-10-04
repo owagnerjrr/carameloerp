@@ -2104,3 +2104,23 @@ textarea {
 .finance-page .panel {
   min-width: 0;
 }
+.transfer-indicators {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+.transfer-indicators article,
+.transfer-document {
+  background: white;
+  border: 1px solid #e5e7df;
+  border-radius: 12px;
+  padding: 1rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  margin-bottom: 0.6rem;
+}
+.transfer-indicators strong {
+  display: block;
+  font-size: 1.5rem;
+}

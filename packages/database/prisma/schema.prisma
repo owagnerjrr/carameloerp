@@ -7,6 +7,7 @@ datasource db {
 }
 
 model Company {
+ transfers StockTransfer[]
   financialCategories FinancialCategory[]
   financialObligations FinancialObligation[]
   purchaseOrders PurchaseOrder[]
@@ -88,6 +89,7 @@ model RolePermission {
   @@id([roleId,permissionCode])
 }
 model Membership {
+ responsibleTransfers StockTransfer[]
   financialSettlements FinancialSettlement[]
   financialActions FinancialAction[]
   financialObligations FinancialObligation[]
@@ -211,6 +213,7 @@ model Category {
   @@unique([companyId,name])
 }
 model Product {
+ transferItems StockTransferItem[]
   purchaseItems PurchaseOrderItem[]
   purchaseDivergences PurchaseDivergence[]
   eventItems EventDocumentItem[]
@@ -272,6 +275,9 @@ model Product {
   @@index([companyId,publisher])
 }
 model Warehouse {
+ outgoingTransfers StockTransfer[] @relation("TransferOrigin")
+ incomingTransfers StockTransfer[] @relation("TransferDestination")
+ transitTransfer StockTransfer? @relation("TransferTransit")
   kind String @default("STANDARD")
   event Event? @relation("EventStock")
   transitEvent Event? @relation("EventTransit")
@@ -579,6 +585,10 @@ model ProductIdentifier {
  @@index([companyId,productId])
 }
 model StockDocument {
+ transferId String? @db.Uuid
+ transfer StockTransfer? @relation(fields:[companyId,transferId],references:[companyId,id],onDelete:Restrict)
+ divergences TransferDivergence[]
+ @@index([companyId,transferId,createdAt])
  purchaseReceipt PurchaseReceipt?
  id String @id @default(uuid()) @db.Uuid
  companyId String @db.Uuid
@@ -1023,4 +1033,56 @@ model FinancialAction {
  actor Membership @relation(fields:[companyId,actorId],references:[companyId,id])
  @@unique([companyId,requestKey])
  @@index([companyId,obligationId,createdAt])
+}
+
+model StockTransfer {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ code String
+ status String @default("DRAFT")
+ originWarehouseId String @db.Uuid
+ destinationWarehouseId String @db.Uuid
+ transitWarehouseId String @unique @db.Uuid
+ responsibleId String @db.Uuid
+ notes String @default("")
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ company Company @relation(fields:[companyId],references:[id])
+ origin Warehouse @relation("TransferOrigin",fields:[companyId,originWarehouseId],references:[companyId,id])
+ destination Warehouse @relation("TransferDestination",fields:[companyId,destinationWarehouseId],references:[companyId,id])
+ transit Warehouse @relation("TransferTransit",fields:[companyId,transitWarehouseId],references:[companyId,id])
+ responsible Membership @relation(fields:[companyId,responsibleId],references:[companyId,id])
+ items StockTransferItem[]
+ documents StockDocument[]
+ @@unique([companyId,id])
+ @@unique([companyId,code])
+ @@unique([companyId,transitWarehouseId])
+ @@index([companyId,status,createdAt])
+ @@index([companyId,originWarehouseId])
+ @@index([companyId,destinationWarehouseId])
+}
+model StockTransferItem {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ transferId String @db.Uuid
+ productId String @db.Uuid
+ quantity Int
+ received Int @default(0)
+ returned Int @default(0)
+ transfer StockTransfer @relation(fields:[companyId,transferId],references:[companyId,id])
+ product Product @relation(fields:[companyId,productId],references:[companyId,id])
+ @@unique([companyId,transferId,productId])
+}
+model TransferDivergence {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ documentId String @db.Uuid
+ code String
+ kind String
+ expected Int
+ observed Int
+ reason String
+ createdAt DateTime @default(now())
+ document StockDocument @relation(fields:[companyId,documentId],references:[companyId,id])
+ @@index([companyId,documentId])
 }

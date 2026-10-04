@@ -1,3 +1,4 @@
+import { transferRoutes } from "./modules/transfers.js";
 import { receivableRoutes } from "./modules/receivables.js";
 import { payableRoutes } from "./modules/payables.js";
 import { eventRoutes } from "./modules/events.js";
@@ -139,6 +140,7 @@ export async function buildApp(options: AppOptions) {
   await userRoutes(app, options.db);
   await dashboardRoutes(app, options.db);
   await stockRoutes(app, options.db);
+  await transferRoutes(app, options.db);
   await salesRoutes(app, options.db);
   await operationRoutes(app, options.db);
   await eventRoutes(app, options.db);

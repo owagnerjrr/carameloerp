@@ -20,7 +20,7 @@ export async function warehouseAccess(
   if (!allowEvent && warehouse.kind !== "STANDARD")
     throw new HttpError(
       409,
-      "Estoque de evento exige operação pelo módulo Feiras / Eventos.",
+      "Depósito especial exige operação pelo módulo responsável (Eventos/Transferências).",
     );
   return warehouse;
 }
@@ -35,15 +35,65 @@ export async function moveStock(
     warehouseId: string;
     productId: string;
     delta: Prisma.Decimal;
+    transferGroup?: string;
     eventDocumentId?: string;
     documentId?: string;
     saleId?: string;
     returnId?: string;
     reason: string;
-    type: "IN" | "OUT" | "ADJUSTMENT";
+    type: "IN" | "OUT" | "ADJUSTMENT" | "TRANSFER";
   },
 ) {
-  await warehouseAccess(tx, auth, input.warehouseId, !!input.eventDocumentId);
+  let scoped = auth;
+  let transferAccess = false;
+  if (input.type === "TRANSFER") {
+    const doc = input.documentId
+      ? await tx.stockDocument.findFirst({
+          where: { id: input.documentId, companyId: auth.companyId },
+          include: {
+            transfer: { include: { origin: true, destination: true } },
+          },
+        })
+      : null;
+    const t = doc?.transfer;
+    if (
+      !doc ||
+      !t ||
+      !["TRANSFER_SEND", "TRANSFER_RECEIVE", "TRANSFER_RETURN"].includes(
+        doc.kind,
+      )
+    )
+      throw new HttpError(403, "Documento de transferência obrigatório.");
+    const receive = doc.kind === "TRANSFER_RECEIVE",
+      send = doc.kind === "TRANSFER_SEND";
+    const branch = receive ? t.destination.branchId : t.origin.branchId;
+    const permission = receive
+      ? "transfers:receive"
+      : send
+        ? "transfers:send"
+        : "transfers:return";
+    const from = send ? t.originWarehouseId : t.transitWarehouseId,
+      to = receive
+        ? t.destinationWarehouseId
+        : send
+          ? t.transitWarehouseId
+          : t.originWarehouseId;
+    if (
+      (auth.branchId && auth.branchId !== branch) ||
+      !auth.permissions.includes(permission) ||
+      input.transferGroup !== doc.id ||
+      input.warehouseId !== (input.delta.isNegative() ? from : to)
+    )
+      throw new HttpError(403, "Movimento fora do documento autorizado.");
+    scoped = { ...auth, branchId: null };
+    transferAccess = true;
+  }
+  await warehouseAccess(
+    tx,
+    scoped,
+    input.warehouseId,
+    !!input.eventDocumentId || transferAccess,
+  );
   await lock(tx, auth.companyId + ":warehouse:" + input.warehouseId);
   const key = {
     companyId: auth.companyId,
@@ -71,6 +121,7 @@ export async function moveStock(
       quantity: input.delta,
       beforeQuantity: before,
       afterQuantity: after,
+      transferGroup: input.transferGroup,
       eventDocumentId: input.eventDocumentId,
       documentId: input.documentId,
       saleId: input.saleId,

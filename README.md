@@ -250,3 +250,7 @@ Entregue e validado: despesas manuais, confirmação financeira explícita de re
 ## Financeiro — Contas a Receber e fluxo consolidado
 
 Recebíveis do PDV, baixas totais/parciais, previsão, reversão administrativa no cancelamento e visão diária de realizado versus previsto, integrada a Contas a Pagar. Guia de políticas, permissões, migration e limites: [docs/FINANCEIRO-CONTAS-RECEBER.md](docs/FINANCEIRO-CONTAS-RECEBER.md). Aplique `npm run db:migrate` e `npm run test:db` antes de validar a versão.
+
+## Transferências entre filiais
+
+Estoque → Transferências: preparação, envio com trânsito exclusivo, scanner, recebimentos parciais, divergências e retorno controlado. Reutiliza StockDocument/StockMovement/moveStock, com contrapartidas atômicas e isolamento por filial. Políticas, permissões e limites: [docs/TRANSFERENCIAS.md](docs/TRANSFERENCIAS.md).

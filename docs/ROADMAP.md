@@ -14,7 +14,7 @@ Clientes e livros possuem criação, edição, inativação, busca e paginação
 
 Entregues entradas de livros por leitor ou seleção manual, leitura repetida, resumo/confirmacão, saldos por depósito/filial, total autorizado da rede, consulta/filtros, histórico com origem/antes/depois/usuário, ajuste por contagem e motivo. Transações, rollback, idempotência e locks de depósito protegem as operações. Acesso pode ser restrito por filial.
 
-Pendentes: saída avulsa (baixa por venda já entregue), transferências com trânsito/recebimento, inventário como documento completo, reposição avançada, edição de mínimo/localização específica por depósito, produtos parados, relatórios e lotes. A contagem para ajuste não substitui um módulo de inventário. Nenhuma alteração de saldo por edição direta de produto.
+Pendentes: saída avulsa (baixa por venda já entregue), inventário como documento completo, reposição avançada, edição de mínimo/localização específica por depósito, produtos parados, relatórios e lotes. A contagem para ajuste não substitui um módulo de inventário. Nenhuma alteração de saldo por edição direta de produto.
 
 ## FASE 4 — Vendas
 
@@ -53,3 +53,7 @@ Cadastro, envio com trânsito rastreável, conferência com divergências, retor
 ## Compras e fornecedores
 
 Pedido, aprovação, recebimento parcial, scanner, divergências, custo médio, auditoria e reposição inicial: [COMPRAS.md](COMPRAS.md). Evoluções futuras: devolução ao fornecedor, importação fiscal/XML, integração com editoras e reposição considerando pedidos pendentes. Essas integrações não fazem parte deste bloco.
+
+## Transferências entre filiais
+
+Entregues preparação, trânsito separado, recebimento parcial/complementar, divergência, retorno à origem, scanner e auditoria: [TRANSFERENCIAS.md](TRANSFERENCIAS.md). Evoluções: reserva, aprovação multinível, resolução de perdas e documentação fiscal em bloco próprio.

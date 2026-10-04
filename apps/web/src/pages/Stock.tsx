@@ -57,7 +57,13 @@ const statusName: Record<string, string> = {
   LOW: "ESTOQUE BAIXO",
   ZERO: "SEM ESTOQUE",
 };
-export function StockPage({ auth }: { auth: Auth }) {
+export function StockPage({
+  auth,
+  onTransfers,
+}: {
+  auth: Auth;
+  onTransfers?: () => void;
+}) {
   const [tab, setTab] = useState("stock"),
     [options, setOptions] = useState<Options>({
       warehouses: [],
@@ -107,6 +113,11 @@ export function StockPage({ auth }: { auth: Auth }) {
       <div className="page-heading">
         <div>
           <h1>Estoque da livraria</h1>
+          {auth.permissions.includes("transfers:read") && onTransfers && (
+            <button className="secondary" onClick={onTransfers}>
+              Transferências entre filiais
+            </button>
+          )}
           <p>Disponibilidade por unidade, entradas e histórico rastreável.</p>
         </div>
       </div>
