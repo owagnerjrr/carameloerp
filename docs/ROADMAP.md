@@ -14,7 +14,14 @@ Clientes e livros possuem criação, edição, inativação, busca e paginação
 
 Entregues entradas de livros por leitor ou seleção manual, leitura repetida, resumo/confirmacão, saldos por depósito/filial, total autorizado da rede, consulta/filtros, histórico com origem/antes/depois/usuário, ajuste por contagem e motivo. Transações, rollback, idempotência e locks de depósito protegem as operações. Acesso pode ser restrito por filial.
 
-Pendentes: saída avulsa (baixa por venda já entregue), inventário como documento completo, reposição avançada, edição de mínimo/localização específica por depósito, produtos parados, relatórios e lotes. A contagem para ajuste não substitui um módulo de inventário. Nenhuma alteração de saldo por edição direta de produto.
+Inventário físico documental entregue: snapshot, contagem cega, recontagens,
+justificativas, aprovação, fechamento atômico/idempotente, relatório e CSV.
+Movimentos durante rodadas exigem conferência; movimentos posteriores são
+preservados. Guia: [INVENTARIO.md](INVENTARIO.md).
+
+Pendentes: saída avulsa (baixa por venda já entregue), reversão formal de inventário,
+reposição avançada, edição de mínimo/localização específica por depósito, produtos
+parados, relatórios e lotes. Nenhuma alteração de saldo por edição direta de produto.
 
 ## FASE 4 — Vendas
 

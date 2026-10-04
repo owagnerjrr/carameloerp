@@ -1,3 +1,5 @@
+export * from "./inventory.js";
+import { inventoryPermissions } from "./inventory.js";
 export * from "./transfers.js";
 export * from "./receivables.js";
 export * from "./payables.js";
@@ -9,6 +11,7 @@ export * from "./operations.js";
 export * from "./events.js";
 export * from "./purchases.js";
 export const permissions = [
+  ...inventoryPermissions,
   "receivables:read",
   "receivables:receive",
   "receivables:edit",
@@ -60,6 +63,7 @@ export type PermissionCode = (typeof permissions)[number];
 export const rolePermissions: Record<string, readonly PermissionCode[]> = {
   Administrador: permissions,
   Gerente: [
+    ...inventoryPermissions,
     "receivables:read",
     "receivables:receive",
     "receivables:edit",
@@ -132,6 +136,9 @@ export const rolePermissions: Record<string, readonly PermissionCode[]> = {
     "sales:discount",
   ],
   Estoque: [
+    "inventory:read",
+    "inventory:create",
+    "inventory:count",
     "purchases:read",
     "purchases:receive",
     "suppliers:read",

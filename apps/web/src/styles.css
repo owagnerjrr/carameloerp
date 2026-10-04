@@ -2124,3 +2124,68 @@ textarea {
   display: block;
   font-size: 1.5rem;
 }
+/* Physical inventory: page stays within viewport; large tables scroll internally. */
+.inventory-page {
+  min-width: 0;
+  max-width: 100%;
+}
+.inventory-page .card {
+  padding: 18px;
+  margin: 12px 0;
+}
+.inventory-metrics,
+.inventory-filters,
+.inventory-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.inventory-metrics .card {
+  flex: 1;
+  min-width: 130px;
+  display: grid;
+  gap: 8px;
+}
+.inventory-filters label {
+  flex: 1;
+  min-width: 130px;
+}
+.inventory-table {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 16px 0;
+}
+.inventory-table table {
+  min-width: 850px;
+  width: 100%;
+}
+.inventory-page small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.inventory-count {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 170px;
+}
+.inventory-count input {
+  width: 90px;
+}
+.inventory-reader {
+  font-size: 20px;
+}
+.inventory-page p {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .inventory-page .page-heading {
+    flex-wrap: wrap;
+  }
+  .inventory-filters label {
+    min-width: 100%;
+  }
+  .inventory-actions button {
+    flex: 1;
+  }
+}

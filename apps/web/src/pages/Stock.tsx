@@ -60,9 +60,11 @@ const statusName: Record<string, string> = {
 export function StockPage({
   auth,
   onTransfers,
+  onInventory,
 }: {
   auth: Auth;
   onTransfers?: () => void;
+  onInventory?: () => void;
 }) {
   const [tab, setTab] = useState("stock"),
     [options, setOptions] = useState<Options>({
@@ -113,6 +115,11 @@ export function StockPage({
       <div className="page-heading">
         <div>
           <h1>Estoque da livraria</h1>
+          {auth.permissions.includes("inventory:read") && onInventory && (
+            <button className="secondary" onClick={onInventory}>
+              Inventários
+            </button>
+          )}
           {auth.permissions.includes("transfers:read") && onTransfers && (
             <button className="secondary" onClick={onTransfers}>
               Transferências entre filiais

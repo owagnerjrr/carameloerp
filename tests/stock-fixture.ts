@@ -130,6 +130,10 @@ export async function stockFixture(db: Database) {
         await tx.stockTransferItem.deleteMany({ where });
         await tx.stockDocumentItem.deleteMany({ where });
         await tx.stockDocument.deleteMany({ where });
+        await tx.inventoryAction.deleteMany({ where });
+        await tx.inventoryCount.deleteMany({ where });
+        await tx.inventoryItem.deleteMany({ where });
+        await tx.inventory.deleteMany({ where });
         await tx.stockTransfer.deleteMany({ where });
         await tx.stockBalance.deleteMany({ where });
         await tx.productIdentifier.deleteMany({ where });

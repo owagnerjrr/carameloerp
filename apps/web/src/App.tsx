@@ -53,10 +53,19 @@ const PurchasesPage = lazy(() =>
 const FinancePage = lazy(() =>
   import("./pages/Finance").then((m) => ({ default: m.FinancePage })),
 );
+const InventoryPage = lazy(() =>
+  import("./pages/Inventory").then((m) => ({ default: m.InventoryPage })),
+);
 const TransfersPage = lazy(() =>
   import("./pages/Transfers").then((m) => ({ default: m.TransfersPage })),
 );
 const pages = [
+  {
+    id: "inventory",
+    label: "Inventários",
+    icon: ClipboardList,
+    permission: "inventory:read",
+  },
   {
     id: "transfers",
     label: "Transferências",
@@ -399,10 +408,16 @@ export function App() {
               />
             ) : page === "events" ? (
               <EventsPage auth={auth} />
+            ) : page === "inventory" ? (
+              <InventoryPage auth={auth} />
             ) : page === "transfers" ? (
               <TransfersPage auth={auth} />
             ) : page === "stock" ? (
-              <StockPage auth={auth} onTransfers={() => setPage("transfers")} />
+              <StockPage
+                auth={auth}
+                onTransfers={() => setPage("transfers")}
+                onInventory={() => setPage("inventory")}
+              />
             ) : page === "audit" ? (
               <AuditPage />
             ) : (

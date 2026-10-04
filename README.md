@@ -43,6 +43,12 @@ O rascunho fica em memória enquanto a tela está montada, inclusive ao cadastra
 
 ## Estoque por filial, histórico e ajuste
 
+**Inventários físicos:** snapshot ao iniciar, escopo completo/parcial, contagem
+cega, scanner, zero confirmado, recontagem histórica, revisão, aprovação e
+fechamento transacional com ajustes formais. Movimentações posteriores à rodada
+aceita são preservadas; movimentações durante uma rodada exigem nova conferência.
+Relatório e CSV disponíveis para revisores. Guia: [docs/INVENTARIO.md](docs/INVENTARIO.md).
+
 `Company → Branch → Warehouse → StockBalance`, chave `(empresa, depósito, livro)`. A consulta inclui livros sem linha de saldo como zero e filtra filial, título/ISBN/autor, editora, categoria e NORMAL/ESTOQUE BAIXO/SEM ESTOQUE. O mínimo/localização cadastral é utilizado quando não há valor específico no saldo. Não há edição direta de quantidade no livro.
 
 **Rede e histórico** soma depósitos por filial e mostra o total autorizado, usuário, data/hora, tipo, origem, quantidade, saldo anterior/posterior e motivo. Movimentos antigos sem esses detalhes aparecem como legado, sem fabricar valores retroativos.

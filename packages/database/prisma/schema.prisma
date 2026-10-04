@@ -7,6 +7,7 @@ datasource db {
 }
 
 model Company {
+ inventories Inventory[]
  transfers StockTransfer[]
   financialCategories FinancialCategory[]
   financialObligations FinancialObligation[]
@@ -39,6 +40,7 @@ model Company {
   auditLogs AuditLog[]
 }
 model Branch {
+ inventories Inventory[]
   financialObligations FinancialObligation[]
   purchaseOrders PurchaseOrder[]
   events Event[]
@@ -89,6 +91,10 @@ model RolePermission {
   @@id([roleId,permissionCode])
 }
 model Membership {
+ assignedInventories Inventory[] @relation("InventoryResponsible")
+ approvedInventories Inventory[] @relation("InventoryApprover")
+ inventoryCounts InventoryCount[]
+ inventoryActions InventoryAction[]
  responsibleTransfers StockTransfer[]
   financialSettlements FinancialSettlement[]
   financialActions FinancialAction[]
@@ -213,6 +219,7 @@ model Category {
   @@unique([companyId,name])
 }
 model Product {
+ inventoryItems InventoryItem[]
  transferItems StockTransferItem[]
   purchaseItems PurchaseOrderItem[]
   purchaseDivergences PurchaseDivergence[]
@@ -275,6 +282,7 @@ model Product {
   @@index([companyId,publisher])
 }
 model Warehouse {
+ inventories Inventory[]
  outgoingTransfers StockTransfer[] @relation("TransferOrigin")
  incomingTransfers StockTransfer[] @relation("TransferDestination")
  transitTransfer StockTransfer? @relation("TransferTransit")
@@ -585,6 +593,9 @@ model ProductIdentifier {
  @@index([companyId,productId])
 }
 model StockDocument {
+ inventoryId String? @db.Uuid
+ inventory Inventory? @relation(fields:[companyId,inventoryId],references:[companyId,id],onDelete:Restrict)
+ @@index([companyId,inventoryId])
  transferId String? @db.Uuid
  transfer StockTransfer? @relation(fields:[companyId,transferId],references:[companyId,id],onDelete:Restrict)
  divergences TransferDivergence[]
@@ -1072,6 +1083,93 @@ model StockTransferItem {
  transfer StockTransfer @relation(fields:[companyId,transferId],references:[companyId,id])
  product Product @relation(fields:[companyId,productId],references:[companyId,id])
  @@unique([companyId,transferId,productId])
+}
+model Inventory {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ branchId String @db.Uuid
+ warehouseId String @db.Uuid
+ responsibleId String @db.Uuid
+ approvedById String? @db.Uuid
+ code String
+ description String
+ scope String
+ selectedIds Json
+ blind Boolean @default(true)
+ blindRecount Boolean @default(true)
+ status String @default("DRAFT")
+ scheduledAt DateTime @db.Date
+ startedAt DateTime?
+ approvedAt DateTime?
+ closedAt DateTime?
+ cancelledAt DateTime?
+ cancelReason String?
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ company Company @relation(fields:[companyId],references:[id])
+ branch Branch @relation(fields:[companyId,branchId],references:[companyId,id])
+ warehouse Warehouse @relation(fields:[companyId,warehouseId],references:[companyId,id])
+ responsible Membership @relation("InventoryResponsible",fields:[companyId,responsibleId],references:[companyId,id])
+ approver Membership? @relation("InventoryApprover",fields:[companyId,approvedById],references:[companyId,id])
+ items InventoryItem[]
+ documents StockDocument[]
+ actions InventoryAction[]
+ @@unique([companyId,id])
+ @@unique([companyId,code])
+ @@index([companyId,branchId,status,createdAt])
+ @@index([companyId,warehouseId,status])
+}
+model InventoryItem {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ inventoryId String @db.Uuid
+ productId String @db.Uuid
+ title String
+ isbn String?
+ sku String
+ systemQuantity Decimal @db.Decimal(14,3)
+ unitCost Decimal @db.Decimal(14,2)
+ currentRound Int @default(1)
+ reason String?
+ justification String?
+ inventory Inventory @relation(fields:[companyId,inventoryId],references:[companyId,id])
+ product Product @relation(fields:[companyId,productId],references:[companyId,id])
+ counts InventoryCount[]
+ @@unique([companyId,id])
+ @@unique([companyId,inventoryId,productId])
+}
+model InventoryCount {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ itemId String @db.Uuid
+ round Int
+ actorId String @db.Uuid
+ quantity Int
+ referenceQuantity Decimal @db.Decimal(14,3)
+ movementCount Int
+ source String
+ notes String @default("")
+ openedAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ acceptedAt DateTime?
+ item InventoryItem @relation(fields:[companyId,itemId],references:[companyId,id])
+ actor Membership @relation(fields:[companyId,actorId],references:[companyId,id])
+ @@unique([companyId,itemId,round])
+}
+model InventoryAction {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ inventoryId String @db.Uuid
+ actorId String @db.Uuid
+ kind String
+ requestKey String @db.Uuid
+ requestHash String
+ result Json
+ createdAt DateTime @default(now())
+ inventory Inventory @relation(fields:[companyId,inventoryId],references:[companyId,id])
+ actor Membership @relation(fields:[companyId,actorId],references:[companyId,id])
+ @@unique([companyId,requestKey])
+ @@index([companyId,inventoryId,createdAt])
 }
 model TransferDivergence {
  id String @id @default(uuid()) @db.Uuid
