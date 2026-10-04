@@ -168,6 +168,10 @@ npm run dev
 
 Use `localhost:5173` no navegador conforme `WEB_ORIGIN`. Se mudar hostname/porta, ajuste ambos. A API rejeita mutações sem o cabeçalho Origin correspondente; clientes HTTP externos também devem enviá-lo. Não há CORS aberto.
 
+No Windows, mantenha `npm.cmd run db:local` em um terminal e `npm.cmd run dev` em outro. O Vite lê `WEB_ORIGIN`, `HOST` e `PORT` do ambiente da raiz e não muda silenciosamente de porta quando ela está ocupada. Encerre apenas instâncias antigas identificadas do próprio projeto antes de iniciar outra.
+
+Em desenvolvimento, falhas de conexão ou de abertura da porta da API mostram a fase, o código e a stack sanitizada, ocultando URLs e segredos. Em produção, a mensagem permanece genérica. Uma falha do processo da API encerra o comando de desenvolvimento para não deixar um frontend sem backend. Execute geração do Prisma e build com os watchers encerrados, evitando leitura simultânea dos arquivos gerados enquanto são reescritos.
+
 Separadamente: `npm run dev -w @caramelo/api` e `npm run dev -w @caramelo/web`. O watcher da API recompila TypeScript e reinicia o processo Node. Ctrl+C encerra os serviços; encerre o PostgreSQL portátil no terminal dele.
 
 ## Testes e validação

@@ -21,7 +21,10 @@ const saleInclude = {
   cashSession: { include: { cashRegister: true } },
   returns: { include: { items: true, credit: true } },
   exchangeOrigin: true,
-  payments: { include: { financialEntries: true } },
+  payments: {
+    include: { financialEntries: true },
+    orderBy: [{ method: "desc" }, { id: "asc" }],
+  },
   warehouse: { include: { branch: true } },
   branch: true,
   seller: { select: { user: { select: { name: true } } } },

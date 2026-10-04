@@ -29,25 +29,47 @@ const options = {
 };
 if (watching) {
   let child;
+  let stopping = false;
   const watcher = watch(options);
   watcher.on("event", async (event) => {
     if (event.code === "BUNDLE_END") {
       if (child && child.exitCode === null && child.signalCode === null) {
         const previous = child;
+        child = undefined;
         await new Promise((done) => {
           previous.once("exit", done);
           previous.kill();
         });
       }
-      child = spawn(process.execPath, [output], {
-        cwd: root,
-        stdio: "inherit",
-        windowsHide: true,
+      const current = spawn(
+        process.execPath,
+        ["--enable-source-maps", output],
+        {
+          cwd: root,
+          stdio: "inherit",
+          windowsHide: true,
+        },
+      );
+      child = current;
+      current.once("exit", (code) => {
+        if (!stopping && child === current) {
+          process.exitCode = code ?? 1;
+          void watcher.close();
+        }
+      });
+      current.once("error", (error) => {
+        console.error(
+          "Não foi possível iniciar o processo da API.",
+          error.code,
+        );
+        process.exitCode = 1;
+        void watcher.close();
       });
       await event.result.close();
     } else if (event.code === "ERROR") console.error(event.error);
   });
   const stop = async () => {
+    stopping = true;
     child?.kill();
     await watcher.close();
   };

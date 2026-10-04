@@ -62,7 +62,7 @@ const TransfersPage = lazy(() =>
 const pages = [
   {
     id: "inventory",
-    label: "Inventários",
+    label: "Inventário / Balanço",
     icon: ClipboardList,
     permission: "inventory:read",
   },
@@ -243,6 +243,7 @@ export function App() {
                   "customers",
                   "products",
                   "stock",
+                  "inventory",
                   "transfers",
                   "sales",
                   "cash",
